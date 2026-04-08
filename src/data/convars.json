@@ -33,6 +33,16 @@
           "step": 0.1,
           "default": "0.8",
           "description": "Cull small objects (higher = more FPS)"
+        },
+        {
+          "name": "r_lod_switch_scale",
+          "display": "LOD Distance Scale",
+          "type": "slider",
+          "min": 0.25,
+          "max": 2,
+          "step": 0.25,
+          "default": "1",
+          "description": "Lower = earlier LOD switch (more FPS)"
         }
       ]
     },
@@ -66,6 +76,16 @@
           "step": 256,
           "default": "1024",
           "description": "Shadow map resolution"
+        },
+        {
+          "name": "csm_quality_level",
+          "display": "Cascaded Shadow Quality",
+          "type": "slider",
+          "min": 0,
+          "max": 3,
+          "default": "2",
+          "labels": ["Off", "Low", "Medium", "High"],
+          "description": "Cascaded shadow map quality"
         }
       ]
     },
@@ -85,7 +105,7 @@
           "display": "Dynamic Lights",
           "type": "toggle",
           "default": "1",
-          "description": "Dynamic light sources (abilities, etc.)"
+          "description": "Dynamic light sources"
         },
         {
           "name": "lb_enable_stationary_lights",
@@ -107,6 +127,13 @@
           "type": "toggle",
           "default": "1",
           "description": "Indirect lighting (expensive)"
+        },
+        {
+          "name": "r_indirect_diffuse",
+          "display": "Indirect Diffuse",
+          "type": "toggle",
+          "default": "1",
+          "description": "Indirect diffuse lighting"
         }
       ]
     },
@@ -119,7 +146,7 @@
           "display": "Particles",
           "type": "toggle",
           "default": "1",
-          "description": "Particle effects (keep ON for abilities)"
+          "description": "Particle effects (keep ON)"
         },
         {
           "name": "r_effects_bloom",
@@ -158,6 +185,13 @@
           "type": "toggle",
           "default": "1",
           "description": "3D fog effects"
+        },
+        {
+          "name": "r_decals",
+          "display": "Decals",
+          "type": "toggle",
+          "default": "1",
+          "description": "Bullet holes, blood splatter, etc."
         }
       ]
     },
@@ -244,6 +278,90 @@
           "default": "2",
           "labels": ["Low", "Medium", "High", "Ultra"],
           "description": "Model level of detail"
+        },
+        {
+          "name": "r_grass",
+          "display": "Grass",
+          "type": "toggle",
+          "default": "1",
+          "description": "Grass rendering"
+        },
+        {
+          "name": "r_foliage",
+          "display": "Foliage",
+          "type": "toggle",
+          "default": "1",
+          "description": "Foliage rendering"
+        }
+      ]
+    },
+    {
+      "name": "Camera & Crosshair",
+      "icon": "🎯",
+      "convars": [
+        {
+          "name": "citadel_camera_sensitivity",
+          "display": "Camera Sensitivity",
+          "type": "slider",
+          "min": 0.1,
+          "max": 3,
+          "step": 0.1,
+          "default": "1",
+          "description": "Mouse sensitivity"
+        },
+        {
+          "name": "citadel_camera_pitch_inverted",
+          "display": "Invert Pitch",
+          "type": "toggle",
+          "default": "0",
+          "description": "Invert vertical mouse"
+        },
+        {
+          "name": "citadel_crosshair_pip_gap",
+          "display": "Crosshair Gap",
+          "type": "slider",
+          "min": 0,
+          "max": 10,
+          "default": "3",
+          "description": "Gap between crosshair pips"
+        },
+        {
+          "name": "citadel_crosshair_pip_height",
+          "display": "Crosshair Height",
+          "type": "slider",
+          "min": 4,
+          "max": 32,
+          "default": "16",
+          "description": "Height of crosshair pips"
+        },
+        {
+          "name": "citadel_crosshair_pip_width",
+          "display": "Crosshair Width",
+          "type": "slider",
+          "min": 1,
+          "max": 10,
+          "default": "4",
+          "description": "Width of crosshair pips"
+        },
+        {
+          "name": "citadel_crosshair_pip_opacity",
+          "display": "Crosshair Opacity",
+          "type": "slider",
+          "min": 0,
+          "max": 1,
+          "step": 0.1,
+          "default": "0.4",
+          "description": "Crosshair transparency"
+        },
+        {
+          "name": "citadel_crosshair_dot_opacity",
+          "display": "Center Dot Opacity",
+          "type": "slider",
+          "min": 0,
+          "max": 1,
+          "step": 0.1,
+          "default": "0.7",
+          "description": "Center dot transparency"
         }
       ]
     },
@@ -266,40 +384,53 @@
           "description": "Box shadows in UI"
         },
         {
-          "name": "hud_scaling",
-          "display": "HUD Scale",
+          "name": "citadel_healthbars_enabled",
+          "display": "Health Bars",
+          "type": "toggle",
+          "default": "1",
+          "description": "Show health bars"
+        },
+        {
+          "name": "citadel_hud_visible",
+          "display": "HUD Visible",
+          "type": "toggle",
+          "default": "1",
+          "description": "Show the HUD"
+        },
+        {
+          "name": "citadel_damage_text_lifetime",
+          "display": "Damage Number Duration",
           "type": "slider",
           "min": 0.5,
-          "max": 1.5,
-          "step": 0.1,
-          "default": "1.0",
-          "description": "HUD element size"
+          "max": 3,
+          "step": 0.25,
+          "default": "1.5",
+          "description": "How long damage numbers stay"
         }
       ]
     },
     {
-      "name": "Audio",
-      "icon": "🔊",
+      "name": "Network",
+      "icon": "📡",
       "convars": [
         {
-          "name": "snd_musicvolume",
-          "display": "Music Volume",
+          "name": "rate",
+          "display": "Network Rate",
           "type": "slider",
-          "min": 0,
-          "max": 1,
-          "step": 0.1,
-          "default": "0.5",
-          "description": "Background music volume"
+          "min": 62500,
+          "max": 786432,
+          "step": 62500,
+          "default": "786432",
+          "description": "Max bytes/sec from server"
         },
         {
-          "name": "snd_gamevolume",
-          "display": "Game Volume",
+          "name": "cl_interp_ratio",
+          "display": "Interpolation Ratio",
           "type": "slider",
-          "min": 0,
-          "max": 1,
-          "step": 0.1,
-          "default": "1.0",
-          "description": "Overall game sound"
+          "min": 1,
+          "max": 3,
+          "default": "2",
+          "description": "Interpolation amount (lower = responsive)"
         }
       ]
     }
