@@ -183,7 +183,7 @@ class CreatePresetDialog(ctk.CTkToplevel):
         self.result = None
         
         self.title("Create Custom Preset")
-        self.geometry("400x320")
+        self.geometry("400x380")
         self.resizable(False, False)
         self.configure(fg_color=COLORS["bg_dark"])
         
@@ -309,7 +309,7 @@ class GameRunningWarningDialog(ctk.CTkToplevel):
         self.result = False
         
         self.title("Game Running")
-        self.geometry("400x240")
+        self.geometry("400x280")
         self.resizable(False, False)
         self.configure(fg_color=COLORS["bg_dark"])
         
