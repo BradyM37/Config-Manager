@@ -361,3 +361,139 @@ def is_deadlock_running() -> bool:
             return 'deadlock.exe' in result.stdout.lower()
         except:
             return False
+
+
+# ============================================================================
+# GAME LAUNCH DETECTION (for auto-apply)
+# ============================================================================
+
+class GameLaunchWatcher:
+    """Watches for Deadlock to launch and triggers callback"""
+    
+    def __init__(self, on_launch=None, check_interval=5):
+        self.on_launch = on_launch
+        self.check_interval = check_interval
+        self._running = False
+        self._thread = None
+        self._was_running = False
+    
+    def start(self):
+        """Start watching for game launch"""
+        if self._running:
+            return
+        
+        self._running = True
+        self._was_running = is_deadlock_running()
+        
+        import threading
+        self._thread = threading.Thread(target=self._watch_loop, daemon=True)
+        self._thread.start()
+    
+    def stop(self):
+        """Stop watching"""
+        self._running = False
+    
+    def _watch_loop(self):
+        import time
+        
+        while self._running:
+            try:
+                currently_running = is_deadlock_running()
+                
+                # Game just launched
+                if currently_running and not self._was_running:
+                    if self.on_launch:
+                        self.on_launch()
+                
+                self._was_running = currently_running
+            except Exception as e:
+                print(f"Game watch error: {e}")
+            
+            time.sleep(self.check_interval)
+
+
+# ============================================================================
+# HOTKEYS
+# ============================================================================
+
+# Global hotkey registry
+_hotkey_callbacks = {}
+_hotkey_thread = None
+_hotkey_running = False
+
+
+def register_hotkey(hotkey: str, callback) -> bool:
+    """
+    Register a global hotkey
+    
+    Args:
+        hotkey: Key combination like "ctrl+shift+1"
+        callback: Function to call when hotkey is pressed
+    """
+    global _hotkey_callbacks
+    _hotkey_callbacks[hotkey.lower()] = callback
+    return True
+
+
+def unregister_hotkey(hotkey: str):
+    """Unregister a global hotkey"""
+    global _hotkey_callbacks
+    _hotkey_callbacks.pop(hotkey.lower(), None)
+
+
+def start_hotkey_listener():
+    """Start listening for global hotkeys"""
+    global _hotkey_thread, _hotkey_running
+    
+    if _hotkey_running:
+        return
+    
+    try:
+        import keyboard
+        
+        def on_hotkey(hotkey):
+            callback = _hotkey_callbacks.get(hotkey.lower())
+            if callback:
+                try:
+                    callback()
+                except Exception as e:
+                    print(f"Hotkey callback error: {e}")
+        
+        # Register all hotkeys
+        for hotkey in _hotkey_callbacks:
+            try:
+                keyboard.add_hotkey(hotkey, lambda h=hotkey: on_hotkey(h))
+            except Exception as e:
+                print(f"Failed to register hotkey {hotkey}: {e}")
+        
+        _hotkey_running = True
+        
+    except ImportError:
+        print("keyboard module not available - hotkeys disabled")
+    except Exception as e:
+        print(f"Failed to start hotkey listener: {e}")
+
+
+def stop_hotkey_listener():
+    """Stop listening for global hotkeys"""
+    global _hotkey_running
+    
+    try:
+        import keyboard
+        keyboard.unhook_all()
+    except:
+        pass
+    
+    _hotkey_running = False
+
+
+def get_hotkey_presets() -> dict:
+    """Get saved hotkey-to-preset mappings"""
+    return get_setting("hotkey_presets", {})
+
+
+def set_hotkey_preset(hotkey: str, preset_name: str) -> bool:
+    """Assign a hotkey to a preset"""
+    presets = get_hotkey_presets()
+    presets[hotkey.lower()] = preset_name
+    return set_setting("hotkey_presets", presets)

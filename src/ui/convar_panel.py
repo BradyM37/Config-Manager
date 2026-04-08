@@ -23,12 +23,7 @@ def load_convar_definitions() -> dict:
 
 
 def read_current_convars(gameinfo_path: Path) -> dict[str, str]:
-    """
-    Read current convar values from gameinfo.gi
-    
-    Returns:
-        Dict of convar_name -> value
-    """
+    """Read current convar values from gameinfo.gi"""
     convars = {}
     
     if not gameinfo_path or not gameinfo_path.exists():
@@ -38,23 +33,17 @@ def read_current_convars(gameinfo_path: Path) -> dict[str, str]:
         with open(gameinfo_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # Find the ConVars section
         convars_match = re.search(r'ConVars\s*\{(.+?)^\s*\}', content, re.MULTILINE | re.DOTALL)
         
         if convars_match:
             convars_section = convars_match.group(1)
-            
-            # Parse convar lines: name "value" or name value
             pattern = r'^\s*([a-z_][a-z0-9_]*)\s+["\']?([^"\'}\n]+)["\']?'
             
             for match in re.finditer(pattern, convars_section, re.MULTILINE | re.IGNORECASE):
                 name = match.group(1).strip()
                 value = match.group(2).strip().strip('"\'')
-                
-                # Skip comments and section headers
                 if not name.startswith('//'):
                     convars[name] = value
-    
     except Exception as e:
         print(f"Failed to read convars: {e}")
     
@@ -64,63 +53,36 @@ def read_current_convars(gameinfo_path: Path) -> dict[str, str]:
 class ConVarToggle(ctk.CTkFrame):
     """Toggle switch for boolean convars"""
     
-    def __init__(
-        self,
-        parent,
-        name: str,
-        display: str,
-        description: str,
-        default: str = "1",
-        inverse: bool = False,
-        on_change: Optional[Callable] = None,
-        **kwargs
-    ):
+    def __init__(self, parent, name: str, display: str, description: str,
+                 default: str = "1", inverse: bool = False,
+                 on_change: Optional[Callable] = None, **kwargs):
         super().__init__(parent, fg_color="transparent", **kwargs)
         
         self.name = name
+        self.display = display
+        self.description = description
         self.inverse = inverse
         self.on_change = on_change
         
-        # Label
-        self.label = ctk.CTkLabel(
-            self,
-            text=display,
-            font=ctk.CTkFont(size=12),
-            width=180,
-            anchor="w"
-        )
+        self.label = ctk.CTkLabel(self, text=display, font=ctk.CTkFont(size=12),
+                                  width=180, anchor="w")
         self.label.pack(side="left", padx=(0, 10))
         
-        # Switch
         self.switch_var = ctk.BooleanVar(value=self._parse_default(default))
-        self.switch = ctk.CTkSwitch(
-            self,
-            text="",
-            variable=self.switch_var,
-            onvalue=True,
-            offvalue=False,
-            command=self._on_toggle,
-            width=40
-        )
+        self.switch = ctk.CTkSwitch(self, text="", variable=self.switch_var,
+                                    onvalue=True, offvalue=False,
+                                    command=self._on_toggle, width=40)
         self.switch.pack(side="left")
         
-        # Status label
         self.status_label = ctk.CTkLabel(
-            self,
-            text="ON" if self.switch_var.get() else "OFF",
-            font=ctk.CTkFont(size=11),
-            width=40,
+            self, text="ON" if self.switch_var.get() else "OFF",
+            font=ctk.CTkFont(size=11), width=40,
             text_color="#4ade80" if self.switch_var.get() else "#f87171"
         )
         self.status_label.pack(side="left", padx=5)
         
-        # Tooltip-style description
-        self.desc_label = ctk.CTkLabel(
-            self,
-            text=description,
-            font=ctk.CTkFont(size=10),
-            text_color="gray"
-        )
+        self.desc_label = ctk.CTkLabel(self, text=description,
+                                       font=ctk.CTkFont(size=10), text_color="gray")
         self.desc_label.pack(side="right", padx=10)
     
     def _parse_default(self, default: str) -> bool:
@@ -129,17 +91,10 @@ class ConVarToggle(ctk.CTkFrame):
     
     def _on_toggle(self):
         is_on = self.switch_var.get()
-        self.status_label.configure(
-            text="ON" if is_on else "OFF",
-            text_color="#4ade80" if is_on else "#f87171"
-        )
-        
+        self.status_label.configure(text="ON" if is_on else "OFF",
+                                   text_color="#4ade80" if is_on else "#f87171")
         if self.on_change:
-            # Convert to convar value
-            if self.inverse:
-                value = "0" if is_on else "1"
-            else:
-                value = "1" if is_on else "0"
+            value = "0" if (is_on if self.inverse else not is_on) else "1"
             self.on_change(self.name, value)
     
     def get_value(self) -> str:
@@ -153,68 +108,49 @@ class ConVarToggle(ctk.CTkFrame):
         if self.inverse:
             is_on = not is_on
         self.switch_var.set(is_on)
-        self.status_label.configure(
-            text="ON" if is_on else "OFF",
-            text_color="#4ade80" if is_on else "#f87171"
-        )
+        self.status_label.configure(text="ON" if is_on else "OFF",
+                                   text_color="#4ade80" if is_on else "#f87171")
+    
+    def matches_search(self, query: str) -> bool:
+        """Check if this control matches search query"""
+        q = query.lower()
+        return (q in self.name.lower() or q in self.display.lower() or 
+                q in self.description.lower())
 
 
 class ConVarSlider(ctk.CTkFrame):
     """Slider for numeric convars"""
     
-    def __init__(
-        self,
-        parent,
-        name: str,
-        display: str,
-        description: str,
-        min_val: float,
-        max_val: float,
-        default: str = "0",
-        step: float = 1,
-        labels: Optional[list[str]] = None,
-        on_change: Optional[Callable] = None,
-        **kwargs
-    ):
+    def __init__(self, parent, name: str, display: str, description: str,
+                 min_val: float, max_val: float, default: str = "0",
+                 step: float = 1, labels: Optional[list[str]] = None,
+                 on_change: Optional[Callable] = None, **kwargs):
         super().__init__(parent, fg_color="transparent", **kwargs)
         
         self.name = name
+        self.display = display
+        self.description = description
         self.min_val = min_val
         self.max_val = max_val
         self.step = step
         self.labels = labels
         self.on_change = on_change
         
-        # Label
-        self.label = ctk.CTkLabel(
-            self,
-            text=display,
-            font=ctk.CTkFont(size=12),
-            width=150,
-            anchor="w"
-        )
+        self.label = ctk.CTkLabel(self, text=display, font=ctk.CTkFont(size=12),
+                                  width=150, anchor="w")
         self.label.pack(side="left", padx=(0, 10))
         
-        # Slider
         default_val = float(default) if default else min_val
         self.slider = ctk.CTkSlider(
-            self,
-            from_=min_val,
-            to=max_val,
+            self, from_=min_val, to=max_val,
             number_of_steps=int((max_val - min_val) / step) if step else None,
-            width=200,
-            command=self._on_slide
+            width=200, command=self._on_slide
         )
         self.slider.set(default_val)
         self.slider.pack(side="left", padx=5)
         
-        # Value display
-        self.value_label = ctk.CTkLabel(
-            self,
-            text=self._format_value(default_val),
-            font=ctk.CTkFont(size=11, weight="bold"),
-            width=80
-        )
+        self.value_label = ctk.CTkLabel(self, text=self._format_value(default_val),
+                                        font=ctk.CTkFont(size=11, weight="bold"), width=80)
         self.value_label.pack(side="left", padx=5)
     
     def _format_value(self, val: float) -> str:
@@ -222,14 +158,10 @@ class ConVarSlider(ctk.CTkFrame):
             idx = int(val - self.min_val)
             if 0 <= idx < len(self.labels):
                 return self.labels[idx]
-        
-        if self.step >= 1:
-            return str(int(val))
-        return f"{val:.1f}"
+        return str(int(val)) if self.step >= 1 else f"{val:.1f}"
     
     def _on_slide(self, val):
         self.value_label.configure(text=self._format_value(val))
-        
         if self.on_change:
             self.on_change(self.name, str(int(val) if self.step >= 1 else val))
     
@@ -244,6 +176,11 @@ class ConVarSlider(ctk.CTkFrame):
             self.value_label.configure(text=self._format_value(val))
         except ValueError:
             pass
+    
+    def matches_search(self, query: str) -> bool:
+        q = query.lower()
+        return (q in self.name.lower() or q in self.display.lower() or 
+                q in self.description.lower())
 
 
 class ConVarCategory(ctk.CTkFrame):
@@ -252,41 +189,33 @@ class ConVarCategory(ctk.CTkFrame):
     def __init__(self, parent, name: str, icon: str, convars: list, **kwargs):
         super().__init__(parent, **kwargs)
         
+        self.category_name = name
+        self.icon = icon
         self.configure(corner_radius=8, fg_color="#1f2937")
         
-        # Header
-        header = ctk.CTkLabel(
-            self,
-            text=f"{icon} {name}",
-            font=ctk.CTkFont(size=13, weight="bold")
-        )
-        header.pack(anchor="w", padx=10, pady=(8, 5))
+        self.header = ctk.CTkLabel(self, text=f"{icon} {name}",
+                                   font=ctk.CTkFont(size=13, weight="bold"))
+        self.header.pack(anchor="w", padx=10, pady=(8, 5))
         
-        # Convars
         self.controls = {}
+        self.control_frames = []
         
         for cv in convars:
             cv_type = cv.get("type", "toggle")
             
-            if cv_type == "toggle" or cv_type == "toggle_inverse":
+            if cv_type in ("toggle", "toggle_inverse"):
                 control = ConVarToggle(
-                    self,
-                    name=cv["name"],
-                    display=cv["display"],
+                    self, name=cv["name"], display=cv["display"],
                     description=cv.get("description", ""),
                     default=cv.get("default", "1"),
                     inverse=(cv_type == "toggle_inverse")
                 )
             elif cv_type == "slider":
                 control = ConVarSlider(
-                    self,
-                    name=cv["name"],
-                    display=cv["display"],
+                    self, name=cv["name"], display=cv["display"],
                     description=cv.get("description", ""),
-                    min_val=cv.get("min", 0),
-                    max_val=cv.get("max", 100),
-                    default=cv.get("default", "0"),
-                    step=cv.get("step", 1),
+                    min_val=cv.get("min", 0), max_val=cv.get("max", 100),
+                    default=cv.get("default", "0"), step=cv.get("step", 1),
                     labels=cv.get("labels")
                 )
             else:
@@ -294,40 +223,91 @@ class ConVarCategory(ctk.CTkFrame):
             
             control.pack(fill="x", padx=10, pady=3)
             self.controls[cv["name"]] = control
+            self.control_frames.append(control)
     
     def get_values(self) -> dict[str, str]:
         return {name: ctrl.get_value() for name, ctrl in self.controls.items()}
+    
+    def filter_controls(self, query: str) -> int:
+        """Filter controls by search query. Returns number of visible controls."""
+        visible = 0
+        for control in self.control_frames:
+            if not query or control.matches_search(query):
+                control.pack(fill="x", padx=10, pady=3)
+                visible += 1
+            else:
+                control.pack_forget()
+        return visible
 
 
-class ConVarPanel(ctk.CTkScrollableFrame):
-    """Main convar tweaks panel with all categories"""
+class ConVarPanel(ctk.CTkFrame):
+    """Main convar tweaks panel with search and all categories"""
     
     def __init__(self, parent, gameinfo_path: Optional[Path] = None, **kwargs):
         super().__init__(parent, **kwargs)
         
         self.gameinfo_path = gameinfo_path
         self.categories: list[ConVarCategory] = []
-        self.all_controls: dict[str, any] = {}  # Track all controls by convar name
+        self.all_controls: dict[str, any] = {}
         self._build_panel()
     
     def _build_panel(self):
+        # Search bar
+        search_frame = ctk.CTkFrame(self, fg_color="transparent")
+        search_frame.pack(fill="x", padx=10, pady=(10, 5))
+        
+        ctk.CTkLabel(search_frame, text="🔍", font=ctk.CTkFont(size=16)).pack(side="left", padx=(0, 5))
+        
+        self.search_entry = ctk.CTkEntry(
+            search_frame, placeholder_text="Search settings...",
+            width=300, height=35
+        )
+        self.search_entry.pack(side="left", fill="x", expand=True)
+        self.search_entry.bind("<KeyRelease>", self._on_search)
+        
+        self.search_count = ctk.CTkLabel(search_frame, text="",
+                                         font=ctk.CTkFont(size=11), text_color="gray")
+        self.search_count.pack(side="right", padx=10)
+        
+        # Scrollable content
+        self.scroll_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.scroll_frame.pack(fill="both", expand=True, padx=5, pady=5)
+        
         data = load_convar_definitions()
         
         for cat_data in data.get("categories", []):
             category = ConVarCategory(
-                self,
+                self.scroll_frame,
                 name=cat_data["name"],
                 icon=cat_data.get("icon", "⚙️"),
                 convars=cat_data.get("convars", [])
             )
             category.pack(fill="x", pady=5, padx=5)
             self.categories.append(category)
-            
-            # Track all controls
             self.all_controls.update(category.controls)
     
+    def _on_search(self, event=None):
+        """Filter controls based on search query"""
+        query = self.search_entry.get().strip()
+        
+        total_visible = 0
+        for category in self.categories:
+            visible = category.filter_controls(query)
+            total_visible += visible
+            
+            # Hide category if no controls match
+            if visible == 0 and query:
+                category.pack_forget()
+            else:
+                category.pack(fill="x", pady=5, padx=5)
+        
+        if query:
+            self.search_count.configure(text=f"{total_visible} results")
+        else:
+            self.search_count.configure(text="")
+    
     def load_current_values(self, gameinfo_path: Path):
-        """Load current values from gameinfo.gi and update all controls"""
+        """Load current values from gameinfo.gi"""
         self.gameinfo_path = gameinfo_path
         current_values = read_current_convars(gameinfo_path)
         
@@ -344,3 +324,98 @@ class ConVarPanel(ctk.CTkScrollableFrame):
         for category in self.categories:
             values.update(category.get_values())
         return values
+
+
+class CrosshairPreview(ctk.CTkFrame):
+    """Visual preview of crosshair settings"""
+    
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent, **kwargs)
+        
+        self.configure(fg_color="#1a1a2e", corner_radius=10)
+        
+        # Canvas for drawing crosshair
+        self.canvas = ctk.CTkCanvas(self, width=200, height=200,
+                                    bg="#1a1a2e", highlightthickness=0)
+        self.canvas.pack(padx=20, pady=20)
+        
+        # Default values
+        self.gap = 3
+        self.pip_height = 16
+        self.pip_width = 4
+        self.pip_opacity = 0.4
+        self.dot_opacity = 0.7
+        
+        self.draw_crosshair()
+    
+    def update_settings(self, gap=None, pip_height=None, pip_width=None,
+                       pip_opacity=None, dot_opacity=None):
+        """Update crosshair settings and redraw"""
+        if gap is not None:
+            self.gap = gap
+        if pip_height is not None:
+            self.pip_height = pip_height
+        if pip_width is not None:
+            self.pip_width = pip_width
+        if pip_opacity is not None:
+            self.pip_opacity = pip_opacity
+        if dot_opacity is not None:
+            self.dot_opacity = dot_opacity
+        
+        self.draw_crosshair()
+    
+    def draw_crosshair(self):
+        """Draw the crosshair on canvas"""
+        self.canvas.delete("all")
+        
+        cx, cy = 100, 100  # Center
+        
+        # Convert opacity to hex color (white with opacity)
+        pip_color = self._opacity_to_color(self.pip_opacity)
+        dot_color = self._opacity_to_color(self.dot_opacity)
+        
+        # Scale for preview
+        gap = self.gap * 2
+        height = self.pip_height * 1.5
+        width = self.pip_width * 1.5
+        
+        # Top pip
+        self.canvas.create_rectangle(
+            cx - width/2, cy - gap - height,
+            cx + width/2, cy - gap,
+            fill=pip_color, outline=""
+        )
+        
+        # Bottom pip
+        self.canvas.create_rectangle(
+            cx - width/2, cy + gap,
+            cx + width/2, cy + gap + height,
+            fill=pip_color, outline=""
+        )
+        
+        # Left pip
+        self.canvas.create_rectangle(
+            cx - gap - height, cy - width/2,
+            cx - gap, cy + width/2,
+            fill=pip_color, outline=""
+        )
+        
+        # Right pip
+        self.canvas.create_rectangle(
+            cx + gap, cy - width/2,
+            cx + gap + height, cy + width/2,
+            fill=pip_color, outline=""
+        )
+        
+        # Center dot
+        dot_size = 3
+        self.canvas.create_oval(
+            cx - dot_size, cy - dot_size,
+            cx + dot_size, cy + dot_size,
+            fill=dot_color, outline=""
+        )
+    
+    def _opacity_to_color(self, opacity: float) -> str:
+        """Convert opacity (0-1) to grayscale hex color"""
+        val = int(255 * min(1, max(0, opacity)))
+        return f"#{val:02x}{val:02x}{val:02x}"

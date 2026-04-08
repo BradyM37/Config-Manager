@@ -18,14 +18,17 @@ from src.core.settings import (
     load_settings, save_settings, get_setting, set_setting,
     ACCENT_COLORS, list_profiles, save_profile, load_profile,
     list_custom_presets, save_custom_preset, export_preset, import_preset,
-    launch_deadlock, is_deadlock_running, is_startup_enabled, set_startup_enabled
+    launch_deadlock, is_deadlock_running, is_startup_enabled, set_startup_enabled,
+    GameLaunchWatcher, register_hotkey, start_hotkey_listener, stop_hotkey_listener,
+    get_hotkey_presets, set_hotkey_preset
 )
 from src.core.tray import init_tray, stop_tray, get_tray, TRAY_AVAILABLE
 from src.core.notifications import (
     NOTIFICATIONS_AVAILABLE, notify_preset_applied, notify_backup_created,
     notify_game_launched, notify_custom_preset_saved, notify_profile_switched
 )
-from src.ui.convar_panel import ConVarPanel
+from src.core.config import read_convars
+from src.ui.convar_panel import ConVarPanel, CrosshairPreview
 from src import __version__
 
 # App name
@@ -269,6 +272,216 @@ class ProfileSwitchDialog(ctk.CTkToplevel):
         self.destroy()
 
 
+class GameRunningWarningDialog(ctk.CTkToplevel):
+    """Warning dialog when trying to apply config while game is running"""
+    
+    def __init__(self, parent, on_continue=None, on_cancel=None):
+        super().__init__(parent)
+        
+        self.on_continue = on_continue
+        self.on_cancel = on_cancel
+        self.result = False
+        
+        self.title("Game Running")
+        self.geometry("400x200")
+        self.resizable(False, False)
+        self.configure(fg_color=COLORS["bg_dark"])
+        
+        self.transient(parent)
+        self.grab_set()
+        
+        self._build_ui()
+    
+    def _build_ui(self):
+        content = ctk.CTkFrame(self, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=30, pady=25)
+        
+        ctk.CTkLabel(content, text="⚠️ Deadlock is Running", 
+                    font=ctk.CTkFont(size=18, weight="bold"),
+                    text_color=COLORS["accent_warning"]).pack(anchor="w")
+        
+        ctk.CTkLabel(content, text="Changing config while the game is running may not\ntake effect until you restart the game.",
+                    font=ctk.CTkFont(size=12), text_color=COLORS["text_muted"],
+                    justify="left").pack(anchor="w", pady=(10, 25))
+        
+        btn_frame = ctk.CTkFrame(content, fg_color="transparent")
+        btn_frame.pack(fill="x")
+        
+        GradientButton(btn_frame, text="Cancel", style="secondary", width=100,
+                      command=self._cancel).pack(side="left")
+        GradientButton(btn_frame, text="Apply Anyway", style="warning" if "warning" in dir(GradientButton) else "primary",
+                      width=130, command=self._continue).pack(side="right")
+    
+    def _continue(self):
+        self.result = True
+        if self.on_continue:
+            self.on_continue()
+        self.destroy()
+    
+    def _cancel(self):
+        self.result = False
+        if self.on_cancel:
+            self.on_cancel()
+        self.destroy()
+
+
+class PresetDiffDialog(ctk.CTkToplevel):
+    """Shows what changes a preset will make"""
+    
+    def __init__(self, parent, preset_name: str, current_convars: dict, preset_convars: dict, on_apply=None):
+        super().__init__(parent)
+        
+        self.preset_name = preset_name
+        self.current_convars = current_convars
+        self.preset_convars = preset_convars
+        self.on_apply = on_apply
+        
+        self.title(f"Preview: {preset_name}")
+        self.geometry("500x450")
+        self.resizable(False, False)
+        self.configure(fg_color=COLORS["bg_dark"])
+        
+        self.transient(parent)
+        self.grab_set()
+        
+        self._build_ui()
+    
+    def _build_ui(self):
+        content = ctk.CTkFrame(self, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=25, pady=20)
+        
+        ctk.CTkLabel(content, text=f"📊 Changes for {self.preset_name}", 
+                    font=ctk.CTkFont(size=18, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(content, text="These settings will be changed:",
+                    font=ctk.CTkFont(size=12), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 15))
+        
+        # Changes list
+        changes_frame = ctk.CTkScrollableFrame(content, fg_color=COLORS["bg_card"], corner_radius=10, height=280)
+        changes_frame.pack(fill="both", expand=True)
+        
+        changes = []
+        for name, new_val in self.preset_convars.items():
+            old_val = self.current_convars.get(name, "default")
+            if str(old_val) != str(new_val):
+                changes.append((name, old_val, new_val))
+        
+        if not changes:
+            ctk.CTkLabel(changes_frame, text="No changes - preset matches current config",
+                        font=ctk.CTkFont(size=13), text_color=COLORS["text_muted"]).pack(pady=50)
+        else:
+            for name, old_val, new_val in changes:
+                row = ctk.CTkFrame(changes_frame, fg_color="transparent")
+                row.pack(fill="x", padx=15, pady=5)
+                
+                ctk.CTkLabel(row, text=name, font=ctk.CTkFont(size=12, weight="bold"),
+                            width=200, anchor="w").pack(side="left")
+                ctk.CTkLabel(row, text=str(old_val), font=ctk.CTkFont(size=11),
+                            text_color=COLORS["accent_danger"], width=60).pack(side="left")
+                ctk.CTkLabel(row, text="→", font=ctk.CTkFont(size=11),
+                            text_color=COLORS["text_muted"]).pack(side="left", padx=10)
+                ctk.CTkLabel(row, text=str(new_val), font=ctk.CTkFont(size=11),
+                            text_color=COLORS["accent_success"], width=60).pack(side="left")
+        
+        # Summary
+        ctk.CTkLabel(content, text=f"{len(changes)} setting(s) will change",
+                    font=ctk.CTkFont(size=11), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(10, 0))
+        
+        # Buttons
+        btn_frame = ctk.CTkFrame(content, fg_color="transparent")
+        btn_frame.pack(fill="x", pady=(15, 0))
+        
+        GradientButton(btn_frame, text="Cancel", style="secondary", width=100,
+                      command=self.destroy).pack(side="left")
+        GradientButton(btn_frame, text="Apply Preset", style="success", width=130,
+                      command=self._apply).pack(side="right")
+    
+    def _apply(self):
+        if self.on_apply:
+            self.on_apply()
+        self.destroy()
+
+
+class HotkeyDialog(ctk.CTkToplevel):
+    """Dialog for configuring global hotkeys"""
+    
+    def __init__(self, parent, on_save=None):
+        super().__init__(parent)
+        
+        self.on_save = on_save
+        
+        self.title("Configure Hotkeys")
+        self.geometry("450x400")
+        self.resizable(False, False)
+        self.configure(fg_color=COLORS["bg_dark"])
+        
+        self.transient(parent)
+        self.grab_set()
+        
+        self._build_ui()
+    
+    def _build_ui(self):
+        content = ctk.CTkFrame(self, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=25, pady=20)
+        
+        ctk.CTkLabel(content, text="⌨️ Global Hotkeys", 
+                    font=ctk.CTkFont(size=18, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(content, text="Assign keyboard shortcuts to presets",
+                    font=ctk.CTkFont(size=12), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 20))
+        
+        # Preset hotkey assignments
+        presets_frame = ctk.CTkScrollableFrame(content, fg_color=COLORS["bg_card"], corner_radius=10, height=250)
+        presets_frame.pack(fill="both", expand=True)
+        
+        current_hotkeys = get_hotkey_presets()
+        presets = [("potato", "🥔 Potato"), ("balanced", "⚖️ Balanced"), 
+                   ("quality", "💎 Quality"), ("competitive", "🎯 Competitive")]
+        
+        self.hotkey_entries = {}
+        
+        for preset_name, display in presets:
+            row = ctk.CTkFrame(presets_frame, fg_color="transparent")
+            row.pack(fill="x", padx=15, pady=8)
+            
+            ctk.CTkLabel(row, text=display, font=ctk.CTkFont(size=13),
+                        width=120, anchor="w").pack(side="left")
+            
+            # Find current hotkey for this preset
+            current = ""
+            for hk, pn in current_hotkeys.items():
+                if pn == preset_name:
+                    current = hk
+                    break
+            
+            entry = ctk.CTkEntry(row, width=150, height=35,
+                                placeholder_text="e.g. ctrl+shift+1")
+            entry.insert(0, current)
+            entry.pack(side="right")
+            self.hotkey_entries[preset_name] = entry
+        
+        # Info
+        ctk.CTkLabel(content, text="Format: ctrl+shift+1, alt+f1, etc.\nLeave empty to disable.",
+                    font=ctk.CTkFont(size=10), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(10, 0))
+        
+        # Buttons
+        btn_frame = ctk.CTkFrame(content, fg_color="transparent")
+        btn_frame.pack(fill="x", pady=(15, 0))
+        
+        GradientButton(btn_frame, text="Cancel", style="secondary", width=100,
+                      command=self.destroy).pack(side="left")
+        GradientButton(btn_frame, text="Save Hotkeys", style="success", width=130,
+                      command=self._save).pack(side="right")
+    
+    def _save(self):
+        for preset_name, entry in self.hotkey_entries.items():
+            hotkey = entry.get().strip()
+            if hotkey:
+                set_hotkey_preset(hotkey, preset_name)
+        
+        if self.on_save:
+            self.on_save()
+        self.destroy()
+
+
 # ============================================================================
 # SIDEBAR
 # ============================================================================
@@ -353,10 +566,15 @@ class DashboardTab(ctk.CTkFrame):
                                         width=180, height=42, command=self._launch_game)
         self.launch_btn.pack(side="right")
         
+        # Reset to Vanilla
+        self.reset_btn = GradientButton(header, text="🔄 Reset", style="danger",
+                                        width=90, height=42, command=self._reset_to_vanilla)
+        self.reset_btn.pack(side="right", padx=5)
+        
         # Profile switcher
         self.profile_btn = GradientButton(header, text="📁 Profiles", style="secondary",
                                          width=100, height=42, command=self._show_profiles)
-        self.profile_btn.pack(side="right", padx=10)
+        self.profile_btn.pack(side="right", padx=5)
         
         # Stats row
         stats_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -427,6 +645,22 @@ class DashboardTab(ctk.CTkFrame):
     def _quick_apply(self, preset_name):
         if self.app.deadlock_path:
             self.app._apply_preset(preset_name)
+    
+    def _reset_to_vanilla(self):
+        """Reset config to vanilla (original) state"""
+        if not self.app.deadlock_path:
+            self.app.sidebar.set_status("No game found", COLORS["accent_warning"])
+            return
+        
+        # Find vanilla backup
+        backups = list_backups()
+        vanilla = next((b for b in backups if "vanilla" in b.get("label", "").lower()), None)
+        
+        if vanilla and restore_backup(self.app.deadlock_path, vanilla["path"]):
+            self.app.sidebar.set_status("Reset to vanilla", COLORS["accent_success"])
+            self.refresh()
+        else:
+            self.app.sidebar.set_status("No vanilla backup", COLORS["accent_warning"])
     
     def refresh(self):
         if self.app.deadlock_path:
@@ -782,18 +1016,42 @@ class SettingsTab(ctk.CTkFrame):
             ctk.CTkSwitch(notif_content, text="Show toast notifications", variable=self.notif_var,
                          command=lambda: set_setting("show_notifications", self.notif_var.get())).pack(anchor="w", pady=(10, 0))
         
-        # Startup
+        # Startup & Auto-Apply
         startup_section = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
         startup_section.pack(fill="x", pady=(0, 15))
         
         startup_content = ctk.CTkFrame(startup_section, fg_color="transparent")
         startup_content.pack(fill="x", padx=25, pady=20)
         
-        ctk.CTkLabel(startup_content, text="🚀 Startup", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(startup_content, text="🚀 Startup & Automation", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w")
         
         self.startup_var = ctk.BooleanVar(value=is_startup_enabled())
         ctk.CTkSwitch(startup_content, text="Launch on Windows startup", variable=self.startup_var,
                      command=self._toggle_startup).pack(anchor="w", pady=(10, 0))
+        
+        self.auto_apply_var = ctk.BooleanVar(value=get_setting("auto_apply_on_launch", False))
+        ctk.CTkSwitch(startup_content, text="Auto-apply preset when game launches", variable=self.auto_apply_var,
+                     command=lambda: set_setting("auto_apply_on_launch", self.auto_apply_var.get())).pack(anchor="w", pady=(8, 0))
+        
+        self.warn_running_var = ctk.BooleanVar(value=get_setting("warn_game_running", True))
+        ctk.CTkSwitch(startup_content, text="Warn before applying if game is running", variable=self.warn_running_var,
+                     command=lambda: set_setting("warn_game_running", self.warn_running_var.get())).pack(anchor="w", pady=(8, 0))
+        
+        # Hotkeys
+        hotkey_section = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
+        hotkey_section.pack(fill="x", pady=(0, 15))
+        
+        hotkey_content = ctk.CTkFrame(hotkey_section, fg_color="transparent")
+        hotkey_content.pack(fill="x", padx=25, pady=20)
+        
+        ctk.CTkLabel(hotkey_content, text="⌨️ Global Hotkeys", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(hotkey_content, text="Switch presets with keyboard shortcuts", font=ctk.CTkFont(size=12), 
+                    text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 12))
+        GradientButton(hotkey_content, text="Configure Hotkeys", style="secondary", width=160, height=36,
+                      command=self._show_hotkey_dialog).pack(anchor="w")
+    
+    def _show_hotkey_dialog(self):
+        HotkeyDialog(self.app, on_save=self.app._setup_hotkeys)
         
         # Updates
         update_section = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
@@ -983,9 +1241,17 @@ class App(ctk.CTk):
             else:
                 self.sidebar.set_status("Invalid path", COLORS["accent_danger"])
     
-    def _apply_preset(self, preset_name):
+    def _apply_preset(self, preset_name, force: bool = False):
         if not self.deadlock_path:
             self.sidebar.set_status("No game found", COLORS["accent_warning"])
+            return
+        
+        # Check if game is running (unless forced)
+        if not force and get_setting("warn_game_running", True) and is_deadlock_running():
+            GameRunningWarningDialog(
+                self,
+                on_continue=lambda: self._apply_preset(preset_name, force=True)
+            )
             return
         
         self.sidebar.set_status("Applying...", COLORS["accent_warning"])
@@ -1051,10 +1317,46 @@ class App(ctk.CTk):
             threading.Thread(target=do_update, daemon=True).start()
         else:
             self.sidebar.set_status("Up to date", COLORS["accent_success"])
+    
+    def _setup_hotkeys(self):
+        """Setup global hotkeys for preset switching"""
+        try:
+            hotkey_presets = get_hotkey_presets()
+            
+            for hotkey, preset_name in hotkey_presets.items():
+                register_hotkey(hotkey, lambda pn=preset_name: self.after(0, lambda: self._apply_preset(pn, force=True)))
+            
+            if hotkey_presets:
+                start_hotkey_listener()
+                self.sidebar.set_status("Hotkeys active", COLORS["accent_success"])
+        except Exception as e:
+            print(f"Failed to setup hotkeys: {e}")
+    
+    def _setup_game_watcher(self):
+        """Setup game launch detection for auto-apply"""
+        if not get_setting("auto_apply_on_launch", False):
+            return
+        
+        last_preset = get_setting("last_preset")
+        if not last_preset:
+            return
+        
+        def on_game_launch():
+            # Auto-apply last preset when game launches
+            if self.deadlock_path and last_preset:
+                self.after(0, lambda: self._apply_preset(last_preset, force=True))
+        
+        self.game_watcher = GameLaunchWatcher(on_launch=on_game_launch)
+        self.game_watcher.start()
 
 
 def main():
     app = App()
+    
+    # Setup hotkeys and game watcher after init
+    app.after(1000, app._setup_hotkeys)
+    app.after(1500, app._setup_game_watcher)
+    
     app.mainloop()
 
 
