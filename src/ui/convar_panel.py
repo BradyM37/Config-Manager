@@ -37,11 +37,12 @@ def read_current_convars(gameinfo_path: Path) -> dict[str, str]:
         
         if convars_match:
             convars_section = convars_match.group(1)
-            pattern = r'^\s*([a-z_][a-z0-9_]*)\s+["\']?([^"\'}\n]+)["\']?'
+            # Match both: "name" "value" AND name "value" formats
+            pattern = r'^\s*"?([a-z_][a-z0-9_]*)"?\s+"([^"]+)"'
             
             for match in re.finditer(pattern, convars_section, re.MULTILINE | re.IGNORECASE):
                 name = match.group(1).strip()
-                value = match.group(2).strip().strip('"\'')
+                value = match.group(2).strip()
                 if not name.startswith('//'):
                     convars[name] = value
     except Exception as e:
