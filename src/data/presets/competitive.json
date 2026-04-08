@@ -17,15 +17,16 @@
     "r_post_bloom": "false",
     "r_depth_of_field": "false",
     "r_citadel_fog_quality": "0",
-    "r_particle_max_detail_level": "1",
+    "r_particle_max_detail_level": "0",
     "r_particle_shadows": "0",
     "r_texture_stream_mip_bias": "2",
     "r_dashboard_render_quality": "1",
     "r_area_lights": "0",
     "r_arealights": "false",
     "r_citadel_outlines": "1",
-    "gpu_level": "1",
-    "cpu_level": "1",
+    "gpu_level": "0",
+    "cpu_level": "0",
+    "fps_max": "0",
     "r_citadel_motion_blur": "0",
     "r_citadel_antialiasing": "1"
   },
@@ -48,6 +49,9 @@
     "panorama_disable_blur": "1",
     "panorama_disable_box_shadow": "0",
     "cl_interp_ratio": "1",
-    "rate": "786432"
+    "rate": "786432",
+    "fps_max": "0",
+    "r_dynamic_shadows": "0",
+    "mat_vsync": "0"
   }
 }
