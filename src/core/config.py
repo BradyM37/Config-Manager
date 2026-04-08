@@ -142,11 +142,16 @@ def apply_preset(deadlock_path: Path, preset_path_or_name, backup: bool = True) 
         return False
 
 
+DCM_MARKER_START = "// DCM Preset Start"
+DCM_MARKER_END = "// DCM Preset End"
+
+
 def apply_convars_to_gameinfo(gameinfo_path: Path, convars: dict) -> bool:
     """
-    Apply convars to an existing gameinfo.gi file by modifying the ConVars section
+    Apply convars to an existing gameinfo.gi file using a marker-based approach.
     
-    This is safer than full file replacement as it preserves all other settings
+    This inserts a clearly marked block right after 'ConVars {' that can be
+    cleanly removed and replaced on subsequent applies.
     """
     if not gameinfo_path.exists():
         return False
@@ -155,38 +160,27 @@ def apply_convars_to_gameinfo(gameinfo_path: Path, convars: dict) -> bool:
         with open(gameinfo_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
-        # Find the ConVars section
-        convars_match = re.search(r'(ConVars\s*\{)(.*?)(^\s*\})', content, re.MULTILINE | re.DOTALL)
+        # First, remove any existing DCM block
+        dcm_pattern = rf'{re.escape(DCM_MARKER_START)}.*?{re.escape(DCM_MARKER_END)}\n?'
+        content = re.sub(dcm_pattern, '', content, flags=re.DOTALL)
         
-        if not convars_match:
+        # Find 'ConVars' followed by '{' (possibly with whitespace/newlines between)
+        convars_open = re.search(r'(\bConVars\s*\{)', content)
+        
+        if not convars_open:
             print("ConVars section not found in gameinfo.gi")
             return False
         
-        convars_start = convars_match.group(1)
-        convars_section = convars_match.group(2)
-        convars_end = convars_match.group(3)
-        
-        # Update each convar in the section
-        new_section = convars_section
-        
+        # Build our convar block
+        convar_lines = [DCM_MARKER_START]
         for name, value in convars.items():
-            # Pattern to match the convar line
-            pattern = rf'(^\s*{re.escape(name)}\s+)["\']?[^"\'\}}\n]+["\']?'
-            
-            if re.search(pattern, new_section, re.MULTILINE | re.IGNORECASE):
-                # Convar exists, replace it
-                new_section = re.sub(
-                    pattern,
-                    rf'\1"{value}"',
-                    new_section,
-                    flags=re.MULTILINE | re.IGNORECASE
-                )
-            else:
-                # Convar doesn't exist, add it at the start of the section
-                new_section = f'\n{name} "{value}"' + new_section
+            convar_lines.append(f'\t\t"{name}"\t\t"{value}"')
+        convar_lines.append(DCM_MARKER_END)
+        dcm_block = '\n'.join(convar_lines) + '\n'
         
-        # Reconstruct the file
-        new_content = content[:convars_match.start()] + convars_start + new_section + convars_end + content[convars_match.end():]
+        # Insert right after 'ConVars {'
+        insert_pos = convars_open.end()
+        new_content = content[:insert_pos] + '\n' + dcm_block + content[insert_pos:]
         
         with open(gameinfo_path, 'w', encoding='utf-8') as f:
             f.write(new_content)
