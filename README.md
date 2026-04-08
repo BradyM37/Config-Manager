@@ -17,32 +17,10 @@ A clean, modern GUI application for managing Deadlock performance configs.
 ## 📥 Installation
 
 ### Option 1: Download Release (Recommended)
-1. Download `OptiLockManager.exe` from [Releases](https://github.com/optilock/config-manager/releases)
+1. Download `OptiLockManager.exe`
 2. Run the exe - no installation required!
 
-### Option 2: Run from Source
-```bash
-# Clone the repo
-git clone https://github.com/optilock/config-manager.git
-cd config-manager
 
-# Install dependencies
-pip install -r requirements.txt
-
-# Run
-python src/main.py
-```
-
-## 🛠️ Building
-
-To create a standalone .exe:
-
-```bash
-pip install pyinstaller
-python build.py
-```
-
-Output will be in `dist/OptiLockManager.exe`
 
 ## 📁 Project Structure
 
