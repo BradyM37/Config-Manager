@@ -125,16 +125,13 @@ class QuickPresetCard(ctk.CTkFrame):
         self.accent = self.COLORS_MAP.get(name.lower(), COLORS["accent_primary"])
         
         self.configure(border_width=2, border_color=COLORS["border"])
-        self.bind("<Enter>", lambda e: self.configure(border_color=self.accent))
-        self.bind("<Leave>", lambda e: self.configure(border_color=COLORS["border"]))
-        self.bind("<Button-1>", lambda e: on_apply(name))
         
+        # Content
         content = ctk.CTkFrame(self, fg_color="transparent")
         content.pack(fill="both", expand=True, padx=15, pady=15)
         
         icon = ctk.CTkLabel(content, text=self.ICONS.get(name.lower(), "📦"), font=ctk.CTkFont(size=32))
         icon.pack(side="left")
-        icon.bind("<Button-1>", lambda e: on_apply(name))
         
         text_frame = ctk.CTkFrame(content, fg_color="transparent")
         text_frame.pack(side="left", padx=15, fill="both", expand=True)
@@ -142,9 +139,33 @@ class QuickPresetCard(ctk.CTkFrame):
         title = ctk.CTkLabel(text_frame, text=display.replace(self.ICONS.get(name.lower(), ""), "").strip(), 
                             font=ctk.CTkFont(family="Segoe UI", size=15, weight="bold"))
         title.pack(anchor="w")
-        title.bind("<Button-1>", lambda e: on_apply(name))
         
-        ctk.CTkLabel(text_frame, text="Click to apply", font=ctk.CTkFont(size=11), text_color=COLORS["text_muted"]).pack(anchor="w")
+        subtitle = ctk.CTkLabel(text_frame, text="Click to apply", font=ctk.CTkFont(size=11), text_color=COLORS["text_muted"])
+        subtitle.pack(anchor="w")
+        
+        # Bind click to ALL widgets
+        clickable_widgets = [self, content, icon, text_frame, title, subtitle]
+        for widget in clickable_widgets:
+            widget.bind("<Button-1>", self._on_click)
+            widget.bind("<Enter>", self._on_enter)
+            widget.bind("<Leave>", self._on_leave)
+    
+    def _on_click(self, event=None):
+        self.on_apply(self.name)
+    
+    def _on_enter(self, event=None):
+        self.configure(border_color=self.accent)
+    
+    def _on_leave(self, event=None):
+        # Check if mouse is still within the card bounds
+        x, y = self.winfo_pointerxy()
+        widget_x = self.winfo_rootx()
+        widget_y = self.winfo_rooty()
+        widget_w = self.winfo_width()
+        widget_h = self.winfo_height()
+        
+        if not (widget_x <= x <= widget_x + widget_w and widget_y <= y <= widget_y + widget_h):
+            self.configure(border_color=COLORS["border"])
 
 
 # ============================================================================
