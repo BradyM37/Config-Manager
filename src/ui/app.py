@@ -1503,9 +1503,6 @@ class SettingsTab(ctk.CTkFrame):
                     text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 12))
         GradientButton(hotkey_content, text="Configure Hotkeys", style="secondary", width=160, height=36,
                       command=self._show_hotkey_dialog).pack(anchor="w")
-    
-    def _show_hotkey_dialog(self):
-        HotkeyDialog(self.app, on_save=self.app._setup_hotkeys)
         
         # Updates
         update_section = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
@@ -1528,6 +1525,9 @@ class SettingsTab(ctk.CTkFrame):
         ctk.CTkLabel(links_content, text="🔗 Links", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w", pady=(0, 12))
         GradientButton(links_content, text="GitHub", style="secondary", width=120, height=36,
                       command=lambda: webbrowser.open("https://github.com/BradyM37/Config-Manager")).pack(anchor="w")
+    
+    def _show_hotkey_dialog(self):
+        HotkeyDialog(self.app, on_save=self.app._setup_hotkeys)
     
     def _set_accent(self, color_name: str):
         global COLORS
