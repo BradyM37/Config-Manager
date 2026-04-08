@@ -349,7 +349,7 @@ def install_community_preset(preset_id: str, deadlock_path: Path) -> bool:
     Returns:
         True if successful
     """
-    from .config import apply_convars_to_gameinfo
+    from .config import apply_convars_to_gameinfo, write_video_settings
     from .detector import get_gameinfo_path
     from .backup import create_backup
     
@@ -358,18 +358,40 @@ def install_community_preset(preset_id: str, deadlock_path: Path) -> bool:
     if not preset_data:
         return False
     
-    convars = preset_data.get("convars", {})
-    
-    if not convars:
-        print("Preset has no convars")
-        return False
-    
     # Create backup before applying
     create_backup(deadlock_path, label=f"pre-community-{preset_id[:8]}")
     
-    # Apply the convars
-    gameinfo_path = get_gameinfo_path(deadlock_path)
-    return apply_convars_to_gameinfo(gameinfo_path, convars)
+    preset_type = preset_data.get("type", "json")
+    success = True
+    
+    if preset_type == "both":
+        # New format: apply both video.txt and gameinfo.gi settings
+        video_settings = preset_data.get("video", {})
+        convar_settings = preset_data.get("convars", {})
+        
+        if video_settings:
+            success = write_video_settings(deadlock_path, video_settings, backup=False) and success
+        if convar_settings:
+            gameinfo_path = get_gameinfo_path(deadlock_path)
+            success = apply_convars_to_gameinfo(gameinfo_path, convar_settings) and success
+        
+        return success
+    elif preset_type == "video":
+        # Video-only preset
+        video_settings = preset_data.get("video", preset_data.get("settings", {}))
+        if video_settings:
+            return write_video_settings(deadlock_path, video_settings, backup=False)
+        return False
+    else:
+        # Legacy format: convars only (gameinfo.gi)
+        convars = preset_data.get("convars", {})
+        
+        if not convars:
+            print("Preset has no convars")
+            return False
+        
+        gameinfo_path = get_gameinfo_path(deadlock_path)
+        return apply_convars_to_gameinfo(gameinfo_path, convars)
 
 
 def get_installed_community_presets() -> list[str]:
