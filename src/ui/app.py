@@ -1747,7 +1747,9 @@ class App(ctk.CTk):
             if get_setting("show_notifications", True):
                 notify_preset_applied(preset_name)
             
+            # Refresh UI to show new values
             self.dashboard.refresh()
+            self.advanced_tab.refresh()
         else:
             self.sidebar.set_status("Failed", COLORS["accent_danger"])
     
