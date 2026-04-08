@@ -1,39 +1,35 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 import sys
+import os
 from pathlib import Path
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
-# Add the project root to the path
 block_cipher = None
 
 # Project root
 ROOT = Path(SPECPATH)
 
+# Collect all src submodules
+src_hiddenimports = collect_submodules('src')
+ctk_hiddenimports = collect_submodules('customtkinter')
+
+# Collect customtkinter data files
+ctk_datas = collect_data_files('customtkinter')
+
 a = Analysis(
-    ['src/main.py'],
-    pathex=[str(ROOT)],
+    ['launcher.py'],
+    pathex=[str(ROOT), str(ROOT / 'src')],
     binaries=[],
     datas=[
         ('src/data', 'src/data'),
-    ],
+        ('src', 'src'),  # Include entire src package
+    ] + ctk_datas,
     hiddenimports=[
-        'customtkinter',
-        'packaging',
+        'PIL._tkinter_finder',
         'packaging.version',
         'packaging.requirements',
-        'PIL',
-        'PIL._tkinter_finder',
-        'src',
-        'src.core',
-        'src.core.config',
-        'src.core.backup', 
-        'src.core.detector',
-        'src.core.updater',
-        'src.ui',
-        'src.ui.app',
-        'src.ui.convar_panel',
-        'src.ui.preset_cards',
-    ],
+    ] + src_hiddenimports + ctk_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -42,8 +38,6 @@ a = Analysis(
     win_private_assemblies=False,
     cipher=block_cipher,
     noarchive=False,
-    collect_submodules=['customtkinter', 'src'],
-    collect_data=['customtkinter'],
 )
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
