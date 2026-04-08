@@ -50,6 +50,39 @@ def read_current_convars(gameinfo_path: Path) -> dict[str, str]:
     return convars
 
 
+def read_video_settings(video_path: Path) -> dict[str, str]:
+    """Read current video settings from video.txt"""
+    settings = {}
+    
+    if not video_path or not video_path.exists():
+        return settings
+    
+    try:
+        with open(video_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Parse lines like: "setting.r_shadows"		"0"
+        pattern = r'"setting\.([^"]+)"\s+"([^"]*)"'
+        
+        for match in re.finditer(pattern, content):
+            name = match.group(1)
+            value = match.group(2)
+            settings[name] = value
+    
+    except Exception as e:
+        print(f"Failed to read video settings: {e}")
+    
+    return settings
+
+
+def read_all_settings(gameinfo_path: Path, video_path: Path) -> dict[str, str]:
+    """Read settings from both gameinfo.gi and video.txt"""
+    settings = {}
+    settings.update(read_current_convars(gameinfo_path))
+    settings.update(read_video_settings(video_path))
+    return settings
+
+
 class ConVarToggle(ctk.CTkFrame):
     """Toggle switch for boolean convars"""
     
@@ -243,12 +276,14 @@ class ConVarCategory(ctk.CTkFrame):
 class ConVarPanel(ctk.CTkFrame):
     """Main convar tweaks panel with search and all categories"""
     
-    def __init__(self, parent, gameinfo_path: Optional[Path] = None, **kwargs):
+    def __init__(self, parent, gameinfo_path: Optional[Path] = None, video_path: Optional[Path] = None, **kwargs):
         super().__init__(parent, **kwargs)
         
         self.gameinfo_path = gameinfo_path
+        self.video_path = video_path
         self.categories: list[ConVarCategory] = []
         self.all_controls: dict[str, any] = {}
+        self.control_sources: dict[str, str] = {}  # name -> "video" or "convar"
         self._build_panel()
     
     def _build_panel(self):
@@ -285,6 +320,10 @@ class ConVarPanel(ctk.CTkFrame):
             category.pack(fill="x", pady=5, padx=5)
             self.categories.append(category)
             self.all_controls.update(category.controls)
+            
+            # Track which source each convar uses
+            for convar in cat_data.get("convars", []):
+                self.control_sources[convar["name"]] = convar.get("source", "convar")
     
     def _on_search(self, event=None):
         """Filter controls based on search query"""
@@ -306,14 +345,22 @@ class ConVarPanel(ctk.CTkFrame):
         else:
             self.search_count.configure(text="")
     
-    def load_current_values(self, gameinfo_path: Path):
-        """Load current values from gameinfo.gi"""
+    def load_current_values(self, gameinfo_path: Path, video_path: Path = None):
+        """Load current values from gameinfo.gi and video.txt"""
         self.gameinfo_path = gameinfo_path
-        current_values = read_current_convars(gameinfo_path)
+        self.video_path = video_path
+        
+        # Read from both sources
+        current_values = read_all_settings(gameinfo_path, video_path)
         
         for name, value in current_values.items():
             if name in self.all_controls:
                 try:
+                    # Handle video.txt boolean values (true/false vs 1/0)
+                    if value.lower() == "true":
+                        value = "1"
+                    elif value.lower() == "false":
+                        value = "0"
                     self.all_controls[name].set_value(value)
                 except Exception as e:
                     print(f"Failed to set {name} = {value}: {e}")
@@ -324,6 +371,21 @@ class ConVarPanel(ctk.CTkFrame):
         for category in self.categories:
             values.update(category.get_values())
         return values
+    
+    def get_values_by_source(self) -> tuple[dict[str, str], dict[str, str]]:
+        """Get values separated by source: (convar_values, video_values)"""
+        all_values = self.get_all_values()
+        convar_values = {}
+        video_values = {}
+        
+        for name, value in all_values.items():
+            source = self.control_sources.get(name, "convar")
+            if source == "video":
+                video_values[name] = value
+            else:
+                convar_values[name] = value
+        
+        return convar_values, video_values
 
 
 class CrosshairPreview(ctk.CTkFrame):

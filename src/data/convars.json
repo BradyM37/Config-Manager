@@ -12,6 +12,7 @@
           "max": 400,
           "step": 10,
           "default": "0",
+          "source": "video",
           "description": "Maximum FPS (0 = unlimited)"
         },
         {
@@ -22,6 +23,7 @@
           "max": 16000,
           "step": 1000,
           "default": "16000",
+          "source": "convar",
           "description": "Far clipping plane distance"
         },
         {
@@ -32,6 +34,7 @@
           "max": 2,
           "step": 0.1,
           "default": "0.8",
+          "source": "convar",
           "description": "Cull small objects (higher = more FPS)"
         },
         {
@@ -42,6 +45,7 @@
           "max": 2,
           "step": 0.25,
           "default": "1",
+          "source": "convar",
           "description": "Lower = earlier LOD switch (more FPS)"
         }
       ]
@@ -55,6 +59,7 @@
           "display": "Dynamic Shadows",
           "type": "toggle",
           "default": "1",
+          "source": "video",
           "description": "Enable/disable dynamic shadows"
         },
         {
@@ -65,6 +70,7 @@
           "max": 3,
           "default": "2",
           "labels": ["Off", "Low", "Medium", "High"],
+          "source": "video",
           "description": "Shadow quality level"
         },
         {
@@ -75,6 +81,7 @@
           "max": 4096,
           "step": 256,
           "default": "1024",
+          "source": "convar",
           "description": "Shadow map resolution"
         },
         {
@@ -85,6 +92,8 @@
           "max": 3,
           "default": "2",
           "labels": ["Off", "Low", "Medium", "High"],
+          "source": "video",
+          "video_name": "csm_max_num_cascades_override",
           "description": "Cascaded shadow map quality"
         }
       ]
@@ -94,10 +103,11 @@
       "icon": "💡",
       "convars": [
         {
-          "name": "r_ssao",
+          "name": "r_citadel_ssao",
           "display": "Ambient Occlusion",
           "type": "toggle",
           "default": "1",
+          "source": "video",
           "description": "Screen-space ambient occlusion"
         },
         {
@@ -105,6 +115,7 @@
           "display": "Dynamic Lights",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Dynamic light sources"
         },
         {
@@ -112,6 +123,7 @@
           "display": "Stationary Lights",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Static map lighting"
         },
         {
@@ -119,6 +131,7 @@
           "display": "Screen Space Reflections",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Real-time reflections"
         },
         {
@@ -126,6 +139,7 @@
           "display": "Global Illumination",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Indirect lighting (expensive)"
         },
         {
@@ -133,6 +147,7 @@
           "display": "Indirect Diffuse",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Indirect diffuse lighting"
         }
       ]
@@ -146,6 +161,7 @@
           "display": "Particles",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Particle effects (keep ON)"
         },
         {
@@ -153,13 +169,17 @@
           "display": "Bloom",
           "type": "toggle",
           "default": "1",
+          "source": "video",
+          "video_bool": true,
           "description": "Bloom/glow effects"
         },
         {
           "name": "r_depth_of_field",
           "display": "Depth of Field",
           "type": "toggle",
-          "default": "1",
+          "default": "0",
+          "source": "video",
+          "video_bool": true,
           "description": "Depth of field blur"
         },
         {
@@ -170,20 +190,26 @@
           "max": 3,
           "default": "3",
           "labels": ["Lowest", "Low", "Medium", "High"],
+          "source": "video",
           "description": "Particle effect detail level"
         },
         {
-          "name": "r_motion_blur_enabled",
+          "name": "r_citadel_motion_blur",
           "display": "Motion Blur",
           "type": "toggle",
-          "default": "1",
+          "default": "0",
+          "source": "video",
           "description": "Camera motion blur"
         },
         {
-          "name": "r_volumetric_fog",
+          "name": "r_citadel_fog_quality",
           "display": "Volumetric Fog",
-          "type": "toggle",
+          "type": "slider",
+          "min": 0,
+          "max": 2,
           "default": "1",
+          "labels": ["Off", "Low", "High"],
+          "source": "video",
           "description": "3D fog effects"
         },
         {
@@ -191,6 +217,7 @@
           "display": "Decals",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Bullet holes, blood splatter, etc."
         }
       ]
@@ -207,6 +234,7 @@
           "max": 4,
           "default": "0",
           "labels": ["Ultra", "High", "Medium", "Low", "Potato"],
+          "source": "video",
           "description": "Texture detail (higher = blurrier)"
         },
         {
@@ -217,6 +245,7 @@
           "max": 5,
           "default": "3",
           "labels": ["Bilinear", "Trilinear", "Aniso 2x", "Aniso 4x", "Aniso 8x", "Aniso 16x"],
+          "source": "convar",
           "description": "Texture filtering quality"
         }
       ]
@@ -226,13 +255,14 @@
       "icon": "🔲",
       "convars": [
         {
-          "name": "r_antialias_quality",
+          "name": "r_citadel_antialiasing",
           "display": "AA Quality",
           "type": "slider",
           "min": 0,
           "max": 3,
           "default": "2",
           "labels": ["Off", "Low", "Medium", "High"],
+          "source": "video",
           "description": "Anti-aliasing quality"
         },
         {
@@ -240,6 +270,7 @@
           "display": "FXAA",
           "type": "toggle",
           "default": "0",
+          "source": "convar",
           "description": "Fast approximate anti-aliasing"
         }
       ]
@@ -249,10 +280,11 @@
       "icon": "👁️",
       "convars": [
         {
-          "name": "r_citadel_npr_outlines",
+          "name": "r_citadel_outlines",
           "display": "Enemy Outlines",
           "type": "toggle",
           "default": "1",
+          "source": "video",
           "description": "Outlines on enemy players"
         },
         {
@@ -260,6 +292,7 @@
           "display": "Disable Trooper Glow",
           "type": "toggle",
           "default": "0",
+          "source": "convar",
           "description": "Disable minion glow effects"
         },
         {
@@ -267,6 +300,7 @@
           "display": "Clutter Props",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Small debris and clutter"
         },
         {
@@ -277,6 +311,7 @@
           "max": 3,
           "default": "2",
           "labels": ["Low", "Medium", "High", "Ultra"],
+          "source": "convar",
           "description": "Model level of detail"
         },
         {
@@ -284,6 +319,7 @@
           "display": "Grass",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Grass rendering"
         },
         {
@@ -291,6 +327,7 @@
           "display": "Foliage",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Foliage rendering"
         }
       ]
@@ -307,24 +344,8 @@
           "max": 120,
           "step": 1,
           "default": "90",
+          "source": "convar",
           "description": "Camera field of view (higher = wider)"
-        },
-        {
-          "name": "citadel_camera_sensitivity",
-          "display": "Camera Sensitivity",
-          "type": "slider",
-          "min": 0.1,
-          "max": 3,
-          "step": 0.1,
-          "default": "1",
-          "description": "Mouse sensitivity"
-        },
-        {
-          "name": "citadel_camera_pitch_inverted",
-          "display": "Invert Pitch",
-          "type": "toggle",
-          "default": "0",
-          "description": "Invert vertical mouse"
         },
         {
           "name": "citadel_crosshair_pip_gap",
@@ -333,6 +354,7 @@
           "min": 0,
           "max": 10,
           "default": "3",
+          "source": "convar",
           "description": "Gap between crosshair pips"
         },
         {
@@ -342,6 +364,7 @@
           "min": 4,
           "max": 32,
           "default": "16",
+          "source": "convar",
           "description": "Height of crosshair pips"
         },
         {
@@ -351,6 +374,7 @@
           "min": 1,
           "max": 10,
           "default": "4",
+          "source": "convar",
           "description": "Width of crosshair pips"
         },
         {
@@ -361,6 +385,7 @@
           "max": 1,
           "step": 0.1,
           "default": "0.4",
+          "source": "convar",
           "description": "Crosshair transparency"
         },
         {
@@ -371,6 +396,7 @@
           "max": 1,
           "step": 0.1,
           "default": "0.7",
+          "source": "convar",
           "description": "Center dot transparency"
         }
       ]
@@ -384,6 +410,7 @@
           "display": "UI Blur",
           "type": "toggle_inverse",
           "default": "0",
+          "source": "convar",
           "description": "Blur effects in menus"
         },
         {
@@ -391,6 +418,7 @@
           "display": "UI Shadows",
           "type": "toggle_inverse",
           "default": "0",
+          "source": "convar",
           "description": "Box shadows in UI"
         },
         {
@@ -398,6 +426,7 @@
           "display": "Health Bars",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Show health bars"
         },
         {
@@ -405,6 +434,7 @@
           "display": "HUD Visible",
           "type": "toggle",
           "default": "1",
+          "source": "convar",
           "description": "Show the HUD"
         },
         {
@@ -415,6 +445,7 @@
           "max": 3,
           "step": 0.25,
           "default": "1.5",
+          "source": "convar",
           "description": "How long damage numbers stay"
         }
       ]
@@ -431,6 +462,7 @@
           "max": 786432,
           "step": 62500,
           "default": "786432",
+          "source": "convar",
           "description": "Max bytes/sec from server"
         },
         {
@@ -440,6 +472,7 @@
           "min": 1,
           "max": 3,
           "default": "2",
+          "source": "convar",
           "description": "Interpolation amount (lower = responsive)"
         }
       ]

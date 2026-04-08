@@ -10,7 +10,7 @@ import threading
 import webbrowser
 import sys
 
-from src.core.detector import find_deadlock, get_current_config_info, validate_deadlock_path, get_gameinfo_path
+from src.core.detector import find_deadlock, get_current_config_info, validate_deadlock_path, get_gameinfo_path, get_video_settings_path
 from src.core.backup import create_backup, list_backups, restore_backup, ensure_vanilla_backup
 from src.core.config import list_presets, apply_preset, get_presets_dir
 from src.core.updater import check_for_updates, download_update, apply_update
@@ -909,27 +909,45 @@ class AdvancedTab(ctk.CTkFrame):
         self.panel.pack(fill="both", expand=True)
     
     def refresh(self):
-        """Load current values from gameinfo.gi"""
+        """Load current values from gameinfo.gi and video.txt"""
         if self.app.deadlock_path:
             gameinfo = get_gameinfo_path(self.app.deadlock_path)
-            self.panel.load_current_values(gameinfo)
-            self.status_label.configure(text="✓ Loaded current settings from gameinfo.gi", text_color=COLORS["accent_success"])
+            video = get_video_settings_path(self.app.deadlock_path)
+            self.panel.load_current_values(gameinfo, video)
+            self.status_label.configure(text="✓ Loaded settings from gameinfo.gi and video.txt", text_color=COLORS["accent_success"])
         else:
             self.status_label.configure(text="⚠ Game not detected - showing defaults", text_color=COLORS["accent_warning"])
     
     def _apply(self):
-        """Apply convar changes to gameinfo.gi"""
+        """Apply changes to gameinfo.gi (convars) and video.txt (graphics)"""
         if not self.app.deadlock_path:
             self.app.sidebar.set_status("No game found", COLORS["accent_warning"])
             return
         
-        from src.core.config import modify_convars
+        from src.core.config import modify_convars, write_video_settings
         
-        values = self.panel.get_all_values()
+        convar_values, video_values = self.panel.get_values_by_source()
         
-        if modify_convars(self.app.deadlock_path, values):
+        success = True
+        total = 0
+        
+        # Apply convars to gameinfo.gi
+        if convar_values:
+            if modify_convars(self.app.deadlock_path, convar_values):
+                total += len(convar_values)
+            else:
+                success = False
+        
+        # Apply video settings to video.txt
+        if video_values:
+            if write_video_settings(self.app.deadlock_path, video_values):
+                total += len(video_values)
+            else:
+                success = False
+        
+        if success:
             self.app.sidebar.set_status("Applied tweaks", COLORS["accent_success"])
-            self.status_label.configure(text=f"✓ Applied {len(values)} settings", text_color=COLORS["accent_success"])
+            self.status_label.configure(text=f"✓ Applied {total} settings", text_color=COLORS["accent_success"])
         else:
             self.app.sidebar.set_status("Some changes failed", COLORS["accent_warning"])
 
