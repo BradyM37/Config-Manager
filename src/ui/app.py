@@ -106,10 +106,13 @@ class GradientButton(ctk.CTkButton):
         
         style_config = styles.get(style, styles["primary"])
         
+        # Use provided font or default
+        if "font" not in kwargs:
+            kwargs["font"] = ctk.CTkFont(family="Segoe UI", size=13, weight="bold")
+        
         super().__init__(
             parent,
             corner_radius=8,
-            font=ctk.CTkFont(family="Segoe UI", size=13, weight="bold"),
             **style_config,
             **kwargs
         )
