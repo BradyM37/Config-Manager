@@ -30,7 +30,8 @@ from src.core.notifications import (
 from src.core.config import read_convars
 from src.core.community import (
     list_community_presets, install_community_preset, 
-    search_community_presets, get_submit_url
+    search_community_presets, download_community_preset,
+    vote_preset, get_user_vote, submit_preset
 )
 from src.ui.convar_panel import ConVarPanel, CrosshairPreview
 from src import __version__
@@ -946,12 +947,14 @@ class BackupsTab(ctk.CTkFrame):
 # ============================================================================
 
 class CommunityPresetCard(ctk.CTkFrame):
-    """Card for a community preset"""
+    """Card for a community preset with voting and download stats"""
     
-    def __init__(self, parent, preset: dict, on_install, **kwargs):
+    def __init__(self, parent, preset: dict, on_install, on_vote, **kwargs):
         super().__init__(parent, fg_color=COLORS["bg_card"], corner_radius=10, **kwargs)
         self.preset = preset
         self.on_install = on_install
+        self.on_vote = on_vote
+        self.preset_id = preset.get("id", "")
         
         self.configure(border_width=1, border_color=COLORS["border"])
         self.bind("<Enter>", lambda e: self.configure(border_color=COLORS["accent_primary"]))
@@ -960,7 +963,7 @@ class CommunityPresetCard(ctk.CTkFrame):
         content = ctk.CTkFrame(self, fg_color="transparent")
         content.pack(fill="both", expand=True, padx=15, pady=15)
         
-        # Header row
+        # Header row with name and install button
         header = ctk.CTkFrame(content, fg_color="transparent")
         header.pack(fill="x")
         
@@ -968,38 +971,91 @@ class CommunityPresetCard(ctk.CTkFrame):
                     font=ctk.CTkFont(size=15, weight="bold")).pack(side="left")
         
         GradientButton(header, text="Install", style="success", width=80, height=30,
-                      command=lambda: on_install(preset.get("id"))).pack(side="right")
+                      command=lambda: on_install(self.preset_id)).pack(side="right")
         
-        # Author
-        ctk.CTkLabel(content, text=f"by {preset.get('author', 'anonymous')}",
-                    font=ctk.CTkFont(size=11), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 0))
+        # Author and stats row
+        info_frame = ctk.CTkFrame(content, fg_color="transparent")
+        info_frame.pack(fill="x", pady=(5, 0))
+        
+        ctk.CTkLabel(info_frame, text=f"by {preset.get('author', 'anonymous')}",
+                    font=ctk.CTkFont(size=11), text_color=COLORS["text_muted"]).pack(side="left")
+        
+        # Stats: downloads
+        downloads = preset.get("downloads", 0)
+        ctk.CTkLabel(info_frame, text=f"📥 {downloads}",
+                    font=ctk.CTkFont(size=11), text_color=COLORS["text_muted"]).pack(side="right", padx=(10, 0))
         
         # Description
-        ctk.CTkLabel(content, text=preset.get("description", ""),
-                    font=ctk.CTkFont(size=12), text_color=COLORS["text_secondary"],
-                    wraplength=350).pack(anchor="w", pady=(8, 0))
+        desc = preset.get("description", "")
+        if desc:
+            ctk.CTkLabel(content, text=desc,
+                        font=ctk.CTkFont(size=12), text_color=COLORS["text_secondary"],
+                        wraplength=400).pack(anchor="w", pady=(8, 0))
         
-        # Tags
+        # Bottom row: tags and voting
+        bottom_frame = ctk.CTkFrame(content, fg_color="transparent")
+        bottom_frame.pack(fill="x", pady=(10, 0))
+        
+        # Tags on the left
         tags = preset.get("tags", [])
         if tags:
-            tags_frame = ctk.CTkFrame(content, fg_color="transparent")
-            tags_frame.pack(anchor="w", pady=(10, 0))
+            tags_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
+            tags_frame.pack(side="left")
             
-            for tag in tags[:5]:
+            for tag in tags[:4]:
                 tag_label = ctk.CTkLabel(tags_frame, text=tag,
                                         font=ctk.CTkFont(size=10),
                                         fg_color=COLORS["bg_elevated"],
-                                        corner_radius=4, padx=8, pady=2)
+                                        corner_radius=4)
                 tag_label.pack(side="left", padx=(0, 5))
+        
+        # Voting on the right
+        vote_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
+        vote_frame.pack(side="right")
+        
+        upvotes = preset.get("upvotes", 0)
+        downvotes = preset.get("downvotes", 0)
+        score = upvotes - downvotes
+        
+        # Downvote button
+        self.downvote_btn = ctk.CTkButton(
+            vote_frame, text="👎", width=32, height=28,
+            fg_color="transparent", hover_color=COLORS["accent_danger"],
+            font=ctk.CTkFont(size=14),
+            command=lambda: self._vote(-1)
+        )
+        self.downvote_btn.pack(side="left", padx=2)
+        
+        # Score display
+        score_color = COLORS["accent_success"] if score > 0 else (COLORS["accent_danger"] if score < 0 else COLORS["text_muted"])
+        self.score_label = ctk.CTkLabel(vote_frame, text=f"{score:+d}" if score != 0 else "0",
+                                        font=ctk.CTkFont(size=13, weight="bold"),
+                                        text_color=score_color, width=40)
+        self.score_label.pack(side="left", padx=5)
+        
+        # Upvote button
+        self.upvote_btn = ctk.CTkButton(
+            vote_frame, text="👍", width=32, height=28,
+            fg_color="transparent", hover_color=COLORS["accent_success"],
+            font=ctk.CTkFont(size=14),
+            command=lambda: self._vote(1)
+        )
+        self.upvote_btn.pack(side="left", padx=2)
+    
+    def _vote(self, vote_type: int):
+        """Handle vote click"""
+        if self.on_vote:
+            self.on_vote(self.preset_id, vote_type)
 
 
 class CommunityTab(ctk.CTkFrame):
-    """Community presets browser"""
+    """Community presets browser with voting and stats"""
     
     def __init__(self, parent, app, **kwargs):
         super().__init__(parent, fg_color="transparent", **kwargs)
         self.app = app
         self.presets = []
+        self.sort_by = "downloads"  # downloads, upvotes, created_at
         self._build_ui()
     
     def _build_ui(self):
@@ -1018,18 +1074,33 @@ class CommunityTab(ctk.CTkFrame):
         GradientButton(btn_frame, text="📤 Submit Yours", style="primary", width=130, height=40,
                       command=self._submit_preset).pack(side="left", padx=5)
         
+        # Search and sort row
+        filter_frame = ctk.CTkFrame(self, fg_color="transparent")
+        filter_frame.pack(fill="x", pady=(0, 15))
+        
         # Search
-        search_frame = ctk.CTkFrame(self, fg_color="transparent")
-        search_frame.pack(fill="x", pady=(0, 15))
+        ctk.CTkLabel(filter_frame, text="🔍", font=ctk.CTkFont(size=16)).pack(side="left", padx=(0, 10))
         
-        ctk.CTkLabel(search_frame, text="🔍", font=ctk.CTkFont(size=16)).pack(side="left", padx=(0, 10))
-        
-        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Search presets...",
+        self.search_entry = ctk.CTkEntry(filter_frame, placeholder_text="Search presets...",
                                          width=300, height=40)
-        self.search_entry.pack(side="left", fill="x", expand=True)
+        self.search_entry.pack(side="left")
         self.search_entry.bind("<KeyRelease>", self._on_search)
         
-        self.result_count = ctk.CTkLabel(search_frame, text="",
+        # Sort dropdown
+        ctk.CTkLabel(filter_frame, text="Sort by:", font=ctk.CTkFont(size=12),
+                    text_color=COLORS["text_muted"]).pack(side="left", padx=(20, 5))
+        
+        self.sort_menu = ctk.CTkOptionMenu(
+            filter_frame, values=["Most Downloads", "Most Liked", "Newest"],
+            width=140, height=35,
+            fg_color=COLORS["bg_elevated"],
+            button_color=COLORS["bg_card"],
+            button_hover_color=COLORS["bg_card_hover"],
+            command=self._on_sort_change
+        )
+        self.sort_menu.pack(side="left")
+        
+        self.result_count = ctk.CTkLabel(filter_frame, text="",
                                          font=ctk.CTkFont(size=11), text_color=COLORS["text_muted"])
         self.result_count.pack(side="right", padx=10)
         
@@ -1047,13 +1118,28 @@ class CommunityTab(ctk.CTkFrame):
         """Called when tab becomes visible"""
         self._refresh_presets()
     
+    def _on_sort_change(self, choice: str):
+        """Handle sort dropdown change"""
+        sort_map = {
+            "Most Downloads": "downloads",
+            "Most Liked": "upvotes", 
+            "Newest": "created_at"
+        }
+        self.sort_by = sort_map.get(choice, "downloads")
+        self._refresh_presets()
+    
     def _refresh_presets(self, force: bool = True):
         """Fetch and display community presets"""
-        self.loading_label.configure(text="Loading...")
+        # Show loading
+        for widget in self.presets_frame.winfo_children():
+            widget.destroy()
+        self.loading_label = ctk.CTkLabel(self.presets_frame, 
+                                          text="Loading...",
+                                          font=ctk.CTkFont(size=14), text_color=COLORS["text_muted"])
         self.loading_label.pack(pady=50)
         
         def fetch():
-            presets = list_community_presets(force_refresh=force)
+            presets = list_community_presets(sort_by=self.sort_by)
             self.after(0, lambda: self._display_presets(presets))
         
         threading.Thread(target=fetch, daemon=True).start()
@@ -1070,12 +1156,13 @@ class CommunityTab(ctk.CTkFrame):
             ctk.CTkLabel(self.presets_frame, 
                         text="No community presets available yet.\n\nBe the first to submit one!",
                         font=ctk.CTkFont(size=14), text_color=COLORS["text_muted"]).pack(pady=50)
+            self.result_count.configure(text="")
             return
         
         self.result_count.configure(text=f"{len(presets)} presets")
         
         for preset in presets:
-            card = CommunityPresetCard(self.presets_frame, preset, self._install_preset)
+            card = CommunityPresetCard(self.presets_frame, preset, self._install_preset, self._vote_preset)
             card.pack(fill="x", pady=5)
     
     def _on_search(self, event=None):
@@ -1083,11 +1170,14 @@ class CommunityTab(ctk.CTkFrame):
         query = self.search_entry.get().strip()
         
         if not query:
-            self._display_presets(self.presets)
+            self._refresh_presets(force=False)
             return
         
-        filtered = search_community_presets(query)
-        self._display_presets(filtered)
+        def search():
+            filtered = search_community_presets(query)
+            self.after(0, lambda: self._display_presets(filtered))
+        
+        threading.Thread(target=search, daemon=True).start()
     
     def _install_preset(self, preset_id: str):
         """Install a community preset"""
@@ -1101,28 +1191,43 @@ class CommunityTab(ctk.CTkFrame):
             success = install_community_preset(preset_id, self.app.deadlock_path)
             
             if success:
-                self.after(0, lambda: self.app.sidebar.set_status(f"Installed {preset_id}", COLORS["accent_success"]))
+                self.after(0, lambda: self.app.sidebar.set_status("Preset installed!", COLORS["accent_success"]))
                 self.after(0, self.app.dashboard.refresh)
             else:
                 self.after(0, lambda: self.app.sidebar.set_status("Install failed", COLORS["accent_danger"]))
         
         threading.Thread(target=install, daemon=True).start()
     
+    def _vote_preset(self, preset_id: str, vote_type: int):
+        """Vote on a community preset"""
+        def do_vote():
+            success = vote_preset(preset_id, vote_type)
+            if success:
+                # Refresh to show updated counts
+                self.after(500, lambda: self._refresh_presets(force=True))
+        
+        threading.Thread(target=do_vote, daemon=True).start()
+    
     def _submit_preset(self):
         """Open dialog to submit a preset"""
-        SubmitPresetDialog(self.app, self.app.deadlock_path)
+        SubmitPresetDialog(self.app, self.app.deadlock_path, on_submit=self._on_preset_submitted)
+    
+    def _on_preset_submitted(self):
+        """Called after a preset is submitted"""
+        self.app.sidebar.set_status("Preset submitted for review!", COLORS["accent_success"])
 
 
 class SubmitPresetDialog(ctk.CTkToplevel):
-    """Dialog for submitting a preset to the community"""
+    """Dialog for submitting a preset to the community via Supabase"""
     
-    def __init__(self, parent, deadlock_path: Path):
+    def __init__(self, parent, deadlock_path: Path, on_submit=None):
         super().__init__(parent)
         
         self.deadlock_path = deadlock_path
+        self.on_submit = on_submit
         
         self.title("Submit to Community")
-        self.geometry("450x350")
+        self.geometry("450x400")
         self.resizable(False, False)
         self.configure(fg_color=COLORS["bg_dark"])
         
@@ -1141,13 +1246,13 @@ class SubmitPresetDialog(ctk.CTkToplevel):
                     font=ctk.CTkFont(size=12), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 20))
         
         # Name
-        ctk.CTkLabel(content, text="Preset Name", font=ctk.CTkFont(size=12)).pack(anchor="w")
+        ctk.CTkLabel(content, text="Preset Name *", font=ctk.CTkFont(size=12)).pack(anchor="w")
         self.name_entry = ctk.CTkEntry(content, width=390, height=40,
                                        placeholder_text="My Awesome Config")
         self.name_entry.pack(anchor="w", pady=(5, 15))
         
         # Author
-        ctk.CTkLabel(content, text="Your Name", font=ctk.CTkFont(size=12)).pack(anchor="w")
+        ctk.CTkLabel(content, text="Your Name *", font=ctk.CTkFont(size=12)).pack(anchor="w")
         self.author_entry = ctk.CTkEntry(content, width=390, height=40,
                                          placeholder_text="YourUsername")
         self.author_entry.pack(anchor="w", pady=(5, 15))
@@ -1156,11 +1261,22 @@ class SubmitPresetDialog(ctk.CTkToplevel):
         ctk.CTkLabel(content, text="Description", font=ctk.CTkFont(size=12)).pack(anchor="w")
         self.desc_entry = ctk.CTkEntry(content, width=390, height=40,
                                        placeholder_text="What makes this config special?")
-        self.desc_entry.pack(anchor="w", pady=(5, 20))
+        self.desc_entry.pack(anchor="w", pady=(5, 15))
+        
+        # Tags
+        ctk.CTkLabel(content, text="Tags (comma separated)", font=ctk.CTkFont(size=12)).pack(anchor="w")
+        self.tags_entry = ctk.CTkEntry(content, width=390, height=40,
+                                       placeholder_text="competitive, fps, potato")
+        self.tags_entry.pack(anchor="w", pady=(5, 15))
         
         # Info
-        ctk.CTkLabel(content, text="This will open GitHub to submit your preset for review.",
+        ctk.CTkLabel(content, text="Your preset will be reviewed before appearing publicly.",
                     font=ctk.CTkFont(size=10), text_color=COLORS["text_muted"]).pack(anchor="w")
+        
+        # Status label
+        self.status_label = ctk.CTkLabel(content, text="",
+                                         font=ctk.CTkFont(size=11), text_color=COLORS["accent_warning"])
+        self.status_label.pack(anchor="w", pady=(5, 0))
         
         # Buttons
         btn_frame = ctk.CTkFrame(content, fg_color="transparent")
@@ -1168,28 +1284,61 @@ class SubmitPresetDialog(ctk.CTkToplevel):
         
         GradientButton(btn_frame, text="Cancel", style="secondary", width=100,
                       command=self.destroy).pack(side="left")
-        GradientButton(btn_frame, text="Submit →", style="success", width=130,
-                      command=self._submit).pack(side="right")
+        self.submit_btn = GradientButton(btn_frame, text="Submit →", style="success", width=130,
+                                         command=self._submit)
+        self.submit_btn.pack(side="right")
     
     def _submit(self):
         name = self.name_entry.get().strip()
         author = self.author_entry.get().strip()
         desc = self.desc_entry.get().strip()
+        tags_raw = self.tags_entry.get().strip()
         
-        if not name or not author:
+        if not name:
+            self.status_label.configure(text="Please enter a preset name", text_color=COLORS["accent_danger"])
             return
+        
+        if not author:
+            self.status_label.configure(text="Please enter your name", text_color=COLORS["accent_danger"])
+            return
+        
+        # Parse tags
+        tags = [t.strip() for t in tags_raw.split(",") if t.strip()] if tags_raw else []
         
         # Get current convars from the game
         if self.deadlock_path:
             convars = read_convars(self.deadlock_path)
         else:
-            convars = {}
+            self.status_label.configure(text="No game detected - can't read config", text_color=COLORS["accent_danger"])
+            return
         
-        # Open GitHub issue with pre-filled content
-        url = get_submit_url(name, author, desc, convars)
-        webbrowser.open(url)
+        if not convars:
+            self.status_label.configure(text="No config changes to submit", text_color=COLORS["accent_danger"])
+            return
         
-        self.destroy()
+        # Disable button and show submitting
+        self.submit_btn.configure(state="disabled", text="Submitting...")
+        self.status_label.configure(text="Submitting...", text_color=COLORS["accent_warning"])
+        
+        def do_submit():
+            result = submit_preset(name, author, desc, convars, tags)
+            
+            if result:
+                self.after(0, self._on_success)
+            else:
+                self.after(0, self._on_failure)
+        
+        threading.Thread(target=do_submit, daemon=True).start()
+    
+    def _on_success(self):
+        self.status_label.configure(text="✓ Submitted! Pending review.", text_color=COLORS["accent_success"])
+        if self.on_submit:
+            self.on_submit()
+        self.after(1500, self.destroy)
+    
+    def _on_failure(self):
+        self.submit_btn.configure(state="normal", text="Submit →")
+        self.status_label.configure(text="Failed to submit. Try again.", text_color=COLORS["accent_danger"])
 
 
 # ============================================================================
