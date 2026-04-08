@@ -35,7 +35,8 @@ env/
 
 # PyInstaller
 *.manifest
-*.spec
+# Keep our spec file
+!OptiLockManager.spec
 
 # OS
 .DS_Store
