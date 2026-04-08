@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 from typing import Optional
 
-from .detector import get_gameinfo_path
+from .detector import get_gameinfo_path, get_video_settings_path
 from .backup import create_backup, get_config_dir
 
 
@@ -36,20 +36,28 @@ def list_presets() -> list[dict]:
     presets_dir = get_presets_dir()
     presets = []
     
-    # Load JSON presets (preferred - these merge into existing config)
+    # Load JSON presets (preferred)
     for file in presets_dir.glob("*.json"):
         try:
             with open(file, 'r', encoding='utf-8') as f:
                 data = json.load(f)
             
-            presets.append({
+            preset_type = data.get("type", "json")
+            preset_info = {
                 "name": data.get("name", file.stem),
                 "path": file,
                 "display": data.get("display", file.stem.title()),
                 "description": data.get("description", ""),
-                "type": "json",
-                "convars": data.get("convars", {})
-            })
+                "type": preset_type,
+            }
+            
+            # Include the appropriate data based on type
+            if preset_type == "video":
+                preset_info["settings"] = data.get("settings", {})
+            else:
+                preset_info["convars"] = data.get("convars", {})
+            
+            presets.append(preset_info)
         except Exception as e:
             print(f"Failed to load preset {file}: {e}")
     
@@ -84,7 +92,8 @@ def apply_preset(deadlock_path: Path, preset_path_or_name, backup: bool = True) 
     """
     Apply a preset config to Deadlock
     
-    For JSON presets: merges convars into existing gameinfo.gi (safer)
+    For "video" type presets: modifies video.txt (graphics settings)
+    For "json" type presets: modifies gameinfo.gi convars (legacy)
     For .gi presets: replaces the entire file (legacy)
     
     Args:
@@ -109,7 +118,11 @@ def apply_preset(deadlock_path: Path, preset_path_or_name, backup: bool = True) 
                 try:
                     with open(preset_path, 'r', encoding='utf-8') as f:
                         data = json.load(f)
-                    preset = {"type": "json", "convars": data.get("convars", {}), "path": preset_path}
+                    preset_type = data.get("type", "json")
+                    if preset_type == "video":
+                        preset = {"type": "video", "settings": data.get("settings", {}), "path": preset_path}
+                    else:
+                        preset = {"type": "json", "convars": data.get("convars", {}), "path": preset_path}
                 except:
                     return False
             elif preset_path.suffix == '.gi':
@@ -122,18 +135,23 @@ def apply_preset(deadlock_path: Path, preset_path_or_name, backup: bool = True) 
         print(f"Preset not found: {preset_path_or_name}")
         return False
     
-    gameinfo_path = get_gameinfo_path(deadlock_path)
-    
     try:
         if backup:
             create_backup(deadlock_path, label="pre-preset")
         
-        if preset.get("type") == "json":
-            # Smart merge - only modify ConVars section
+        preset_type = preset.get("type", "json")
+        
+        if preset_type == "video":
+            # New video.txt based presets (modifies graphics settings)
+            return write_video_settings(deadlock_path, preset.get("settings", {}), backup=False)
+        elif preset_type == "json":
+            # Legacy gameinfo.gi convars
+            gameinfo_path = get_gameinfo_path(deadlock_path)
             return apply_convars_to_gameinfo(gameinfo_path, preset.get("convars", {}))
         else:
-            # Legacy full replacement
+            # Legacy full replacement (.gi files)
             if preset["path"].exists():
+                gameinfo_path = get_gameinfo_path(deadlock_path)
                 shutil.copy2(preset["path"], gameinfo_path)
                 return True
             return False
@@ -230,6 +248,85 @@ def read_convars(deadlock_path: Path) -> dict[str, str]:
         print(f"Failed to read convars: {e}")
     
     return convars
+
+
+# ============================================================================
+# VIDEO.TXT SETTINGS (Graphics Settings)
+# ============================================================================
+
+def read_video_settings(deadlock_path: Path) -> dict[str, str]:
+    """
+    Read current video settings from video.txt
+    
+    Returns:
+        Dict of setting_name -> value (without 'setting.' prefix)
+    """
+    video_path = get_video_settings_path(deadlock_path)
+    settings = {}
+    
+    if not video_path.exists():
+        return settings
+    
+    try:
+        with open(video_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Parse lines like: "setting.r_shadows"		"0"
+        pattern = r'"setting\.([^"]+)"\s+"([^"]*)"'
+        
+        for match in re.finditer(pattern, content):
+            name = match.group(1)
+            value = match.group(2)
+            settings[name] = value
+    
+    except Exception as e:
+        print(f"Failed to read video settings: {e}")
+    
+    return settings
+
+
+def write_video_settings(deadlock_path: Path, settings: dict[str, str], backup: bool = True) -> bool:
+    """
+    Write video settings to video.txt
+    
+    Args:
+        deadlock_path: Path to Deadlock installation
+        settings: Dict of setting_name -> value (without 'setting.' prefix)
+        backup: Whether to create a backup first
+    """
+    video_path = get_video_settings_path(deadlock_path)
+    
+    if not video_path.exists():
+        return False
+    
+    try:
+        # Create backup
+        if backup:
+            backup_path = get_config_dir() / "backups" / f"video_{video_path.stat().st_mtime_ns}.txt"
+            backup_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(video_path, backup_path)
+        
+        with open(video_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Update each setting
+        for name, value in settings.items():
+            # Pattern to match the setting line
+            pattern = rf'("setting\.{re.escape(name)}")\s+"[^"]*"'
+            replacement = rf'\1\t\t"{value}"'
+            
+            if re.search(pattern, content):
+                content = re.sub(pattern, replacement, content)
+            # Note: We don't add new settings - video.txt has a fixed structure
+        
+        with open(video_path, 'w', encoding='utf-8') as f:
+            f.write(content)
+        
+        return True
+    
+    except Exception as e:
+        print(f"Failed to write video settings: {e}")
+        return False
 
 
 def modify_convar(deadlock_path: Path, convar_name: str, value: str, backup: bool = True) -> bool:

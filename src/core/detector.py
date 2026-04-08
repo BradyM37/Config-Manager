@@ -86,6 +86,11 @@ def get_gameinfo_path(deadlock_path: Path) -> Path:
     return deadlock_path / "game" / "citadel" / "gameinfo.gi"
 
 
+def get_video_settings_path(deadlock_path: Path) -> Path:
+    """Get the video.txt path (where graphics settings are stored)"""
+    return deadlock_path / "game" / "citadel" / "cfg" / "video.txt"
+
+
 def validate_deadlock_path(path: Path) -> bool:
     """Validate that a path is a valid Deadlock installation"""
     if not path.exists():
