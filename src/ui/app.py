@@ -1227,7 +1227,7 @@ class SubmitPresetDialog(ctk.CTkToplevel):
         self.on_submit = on_submit
         
         self.title("Submit to Community")
-        self.geometry("450x400")
+        self.geometry("450x480")
         self.resizable(False, False)
         self.configure(fg_color=COLORS["bg_dark"])
         
