@@ -173,8 +173,8 @@ if not errorlevel 1 (
     goto waitloop
 )
 
-:: Extra wait for file handles to release
-timeout /t 2 /nobreak >NUL
+:: Extra wait for file handles to release (increased from 2 to 5 seconds)
+timeout /t 5 /nobreak >NUL
 
 :: Try to copy with retries
 set retries=0
@@ -182,17 +182,21 @@ set retries=0
 copy /Y "{update_path_str}" "{current_exe_str}" >NUL 2>&1
 if errorlevel 1 (
     set /a retries+=1
-    if %retries% lss 15 (
-        timeout /t 1 /nobreak >NUL
+    if %retries% lss 30 (
+        timeout /t 2 /nobreak >NUL
         goto copyloop
     )
-    echo Update failed after retries
+    echo Update failed after retries - please update manually
+    echo Download from: https://github.com/BradyM37/Config-Manager/releases/latest
     pause
     goto cleanup
 )
 
-:: Start the new exe
-start "" "{current_exe_str}"
+:: Wait a moment before starting
+timeout /t 2 /nobreak >NUL
+
+:: Start the new exe (use cmd /c start to handle paths with spaces)
+cmd /c start "" "{current_exe_str}"
 
 :cleanup
 :: Clean up downloaded file
