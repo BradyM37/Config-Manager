@@ -46,6 +46,8 @@
     "r_size_cull_threshold": "0.5",
     "citadel_trooper_glow_disabled": "1",
     "panorama_disable_blur": "1",
-    "panorama_disable_box_shadow": "0"
+    "panorama_disable_box_shadow": "0",
+    "cl_interp_ratio": "1",
+    "rate": "786432"
   }
 }
