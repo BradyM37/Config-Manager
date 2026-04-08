@@ -23,12 +23,15 @@ a = Analysis(
     binaries=[],
     datas=[
         ('src/data', 'src/data'),
-        ('src', 'src'),  # Include entire src package
+        ('src', 'src'),
+        ('community-presets', 'community-presets'),
     ] + ctk_datas,
     hiddenimports=[
         'PIL._tkinter_finder',
         'packaging.version',
         'packaging.requirements',
+        'keyboard',
+        'keyboard._winkeyboard',
     ] + src_hiddenimports + ctk_hiddenimports,
     hookspath=[],
     hooksconfig={},
@@ -49,7 +52,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='OptiLockManager',
+    name='DeadlockConfigManager',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

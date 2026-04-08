@@ -13,14 +13,14 @@ from .detector import get_gameinfo_path
 
 def get_backup_dir() -> Path:
     """Get the backup directory path"""
-    backup_dir = Path.home() / "AppData" / "Local" / "OptiLockManager" / "backups"
+    backup_dir = Path.home() / "AppData" / "Local" / "DeadlockConfigManager" / "backups"
     backup_dir.mkdir(parents=True, exist_ok=True)
     return backup_dir
 
 
 def get_config_dir() -> Path:
     """Get the config directory for app settings"""
-    config_dir = Path.home() / "AppData" / "Local" / "OptiLockManager"
+    config_dir = Path.home() / "AppData" / "Local" / "DeadlockConfigManager"
     config_dir.mkdir(parents=True, exist_ok=True)
     return config_dir
 

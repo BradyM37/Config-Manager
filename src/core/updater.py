@@ -103,7 +103,7 @@ def download_update(download_url: str, progress_callback=None) -> Optional[Path]
         total_size = int(response.headers.get('content-length', 0))
         
         # Create temp file
-        temp_dir = Path(tempfile.gettempdir()) / "OptiLockManager"
+        temp_dir = Path(tempfile.gettempdir()) / "DeadlockConfigManager"
         temp_dir.mkdir(parents=True, exist_ok=True)
         
         filename = download_url.split("/")[-1]

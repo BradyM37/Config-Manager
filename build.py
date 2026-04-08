@@ -9,7 +9,7 @@ import shutil
 from pathlib import Path
 
 def build():
-    print("🔨 Building OptiLock Config Manager...")
+    print("🔨 Building Deadlock Config Manager...")
     
     # Ensure PyInstaller is available
     try:
@@ -18,15 +18,12 @@ def build():
         print("Installing PyInstaller...")
         subprocess.run([sys.executable, "-m", "pip", "install", "pyinstaller"], check=True)
     
-    # Build using spec file for proper module resolution
+    # Build using spec file
     cmd = [
         sys.executable, "-m", "PyInstaller",
         "--clean",
-        "OptiLockManager.spec"
+        "DeadlockConfigManager.spec"
     ]
-    
-    # Filter out empty strings
-    cmd = [c for c in cmd if c]
     
     print(f"Running: {' '.join(cmd)}")
     
@@ -34,7 +31,7 @@ def build():
     
     if result.returncode == 0:
         print("\n✅ Build successful!")
-        print("📁 Output: dist/OptiLockManager.exe")
+        print("📁 Output: dist/DeadlockConfigManager.exe")
         
         # Copy presets to dist if they exist
         presets_src = Path("src/data/presets")
