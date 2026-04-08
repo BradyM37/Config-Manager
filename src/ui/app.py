@@ -1,6 +1,6 @@
 """
 Main Application Window
-Deadlock Config Manager - Premium Edition with Tabs
+Deadlock Config Manager - Premium Edition with All Features
 """
 
 import customtkinter as ctk
@@ -8,39 +8,61 @@ from pathlib import Path
 from typing import Optional
 import threading
 import webbrowser
+import sys
 
-from src.core.detector import find_deadlock, get_current_config_info, validate_deadlock_path
+from src.core.detector import find_deadlock, get_current_config_info, validate_deadlock_path, get_gameinfo_path
 from src.core.backup import create_backup, list_backups, restore_backup, ensure_vanilla_backup
 from src.core.config import list_presets, apply_preset, get_presets_dir
 from src.core.updater import check_for_updates
+from src.core.settings import (
+    load_settings, save_settings, get_setting, set_setting,
+    ACCENT_COLORS, list_profiles, save_profile, load_profile,
+    list_custom_presets, save_custom_preset, export_preset, import_preset,
+    launch_deadlock, is_deadlock_running, is_startup_enabled, set_startup_enabled
+)
+from src.core.tray import init_tray, stop_tray, get_tray, TRAY_AVAILABLE
+from src.core.notifications import (
+    NOTIFICATIONS_AVAILABLE, notify_preset_applied, notify_backup_created,
+    notify_game_launched, notify_custom_preset_saved, notify_profile_switched
+)
 from src.ui.convar_panel import ConVarPanel
 from src import __version__
 
-# App name - change this to rebrand
+# App name
 APP_NAME = "Deadlock Config Manager"
 APP_SHORT = "DCM"
+
 
 # ============================================================================
 # THEME CONFIGURATION
 # ============================================================================
 
-COLORS = {
-    "bg_dark": "#0a0a0f",
-    "bg_card": "#12121a", 
-    "bg_card_hover": "#1a1a25",
-    "bg_elevated": "#1e1e2e",
-    "bg_sidebar": "#0d0d14",
-    "border": "#2a2a3a",
-    "border_glow": "#6366f1",
-    "accent_primary": "#8b5cf6",
-    "accent_secondary": "#06b6d4",
-    "accent_success": "#10b981",
-    "accent_warning": "#f59e0b",
-    "accent_danger": "#ef4444",
-    "text_primary": "#ffffff",
-    "text_secondary": "#a1a1aa",
-    "text_muted": "#71717a",
-}
+def get_colors(accent: str = "purple") -> dict:
+    """Get color scheme with selected accent"""
+    accent_info = ACCENT_COLORS.get(accent, ACCENT_COLORS["purple"])
+    
+    return {
+        "bg_dark": "#0a0a0f",
+        "bg_card": "#12121a", 
+        "bg_card_hover": "#1a1a25",
+        "bg_elevated": "#1e1e2e",
+        "bg_sidebar": "#0d0d14",
+        "border": "#2a2a3a",
+        "border_glow": "#6366f1",
+        "accent_primary": accent_info["primary"],
+        "accent_hover": accent_info["hover"],
+        "accent_secondary": "#06b6d4",
+        "accent_success": "#10b981",
+        "accent_warning": "#f59e0b",
+        "accent_danger": "#ef4444",
+        "text_primary": "#ffffff",
+        "text_secondary": "#a1a1aa",
+        "text_muted": "#71717a",
+    }
+
+
+# Initial colors - will be updated on load
+COLORS = get_colors("purple")
 
 ctk.set_appearance_mode("dark")
 
@@ -52,7 +74,7 @@ ctk.set_appearance_mode("dark")
 class GradientButton(ctk.CTkButton):
     def __init__(self, parent, style="primary", **kwargs):
         styles = {
-            "primary": {"fg_color": COLORS["accent_primary"], "hover_color": "#7c3aed"},
+            "primary": {"fg_color": COLORS["accent_primary"], "hover_color": COLORS["accent_hover"]},
             "success": {"fg_color": COLORS["accent_success"], "hover_color": "#059669"},
             "secondary": {"fg_color": COLORS["bg_elevated"], "hover_color": COLORS["bg_card_hover"], "border_width": 1, "border_color": COLORS["border"]},
             "danger": {"fg_color": COLORS["accent_danger"], "hover_color": "#dc2626"},
@@ -115,6 +137,136 @@ class QuickPresetCard(ctk.CTkFrame):
         title.bind("<Button-1>", lambda e: on_apply(name))
         
         ctk.CTkLabel(text_frame, text="Click to apply", font=ctk.CTkFont(size=11), text_color=COLORS["text_muted"]).pack(anchor="w")
+
+
+# ============================================================================
+# DIALOGS
+# ============================================================================
+
+class CreatePresetDialog(ctk.CTkToplevel):
+    """Dialog for creating a custom preset"""
+    
+    def __init__(self, parent, gameinfo_path: Path, on_save=None):
+        super().__init__(parent)
+        
+        self.gameinfo_path = gameinfo_path
+        self.on_save = on_save
+        self.result = None
+        
+        self.title("Create Custom Preset")
+        self.geometry("400x250")
+        self.resizable(False, False)
+        self.configure(fg_color=COLORS["bg_dark"])
+        
+        # Center on parent
+        self.transient(parent)
+        self.grab_set()
+        
+        self._build_ui()
+    
+    def _build_ui(self):
+        content = ctk.CTkFrame(self, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=30, pady=25)
+        
+        ctk.CTkLabel(content, text="⭐ Save Current Config as Preset", 
+                    font=ctk.CTkFont(size=18, weight="bold")).pack(anchor="w")
+        
+        ctk.CTkLabel(content, text="This will save your current gameinfo.gi as a reusable preset.",
+                    font=ctk.CTkFont(size=12), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 20))
+        
+        # Name input
+        ctk.CTkLabel(content, text="Preset Name", font=ctk.CTkFont(size=12)).pack(anchor="w")
+        self.name_entry = ctk.CTkEntry(content, width=340, height=40, placeholder_text="My Custom Preset")
+        self.name_entry.pack(anchor="w", pady=(5, 15))
+        
+        # Description input
+        ctk.CTkLabel(content, text="Description (optional)", font=ctk.CTkFont(size=12)).pack(anchor="w")
+        self.desc_entry = ctk.CTkEntry(content, width=340, height=40, placeholder_text="What makes this preset special?")
+        self.desc_entry.pack(anchor="w", pady=(5, 20))
+        
+        # Buttons
+        btn_frame = ctk.CTkFrame(content, fg_color="transparent")
+        btn_frame.pack(fill="x")
+        
+        GradientButton(btn_frame, text="Cancel", style="secondary", width=100, command=self.destroy).pack(side="left")
+        GradientButton(btn_frame, text="Save Preset", style="success", width=120, command=self._save).pack(side="right")
+    
+    def _save(self):
+        name = self.name_entry.get().strip()
+        if not name:
+            return
+        
+        desc = self.desc_entry.get().strip()
+        result = save_custom_preset(name, self.gameinfo_path, desc)
+        
+        if result:
+            self.result = {"name": name, "path": result}
+            if self.on_save:
+                self.on_save(self.result)
+            notify_custom_preset_saved(name)
+        
+        self.destroy()
+
+
+class ProfileSwitchDialog(ctk.CTkToplevel):
+    """Dialog for switching/managing profiles"""
+    
+    def __init__(self, parent, current_profile: str, on_switch=None):
+        super().__init__(parent)
+        
+        self.current_profile = current_profile
+        self.on_switch = on_switch
+        
+        self.title("Config Profiles")
+        self.geometry("450x400")
+        self.resizable(False, False)
+        self.configure(fg_color=COLORS["bg_dark"])
+        
+        self.transient(parent)
+        self.grab_set()
+        
+        self._build_ui()
+    
+    def _build_ui(self):
+        content = ctk.CTkFrame(self, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=25, pady=20)
+        
+        ctk.CTkLabel(content, text="📁 Config Profiles", 
+                    font=ctk.CTkFont(size=18, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(content, text="Quick switch between different setups",
+                    font=ctk.CTkFont(size=12), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 20))
+        
+        # Profile list
+        profiles_frame = ctk.CTkScrollableFrame(content, fg_color=COLORS["bg_card"], corner_radius=10, height=250)
+        profiles_frame.pack(fill="both", expand=True)
+        
+        profiles = list_profiles()
+        
+        for profile in profiles:
+            row = ctk.CTkFrame(profiles_frame, fg_color=COLORS["bg_elevated"] if profile["name"] == self.current_profile else "transparent",
+                              corner_radius=8)
+            row.pack(fill="x", padx=10, pady=5)
+            
+            row_content = ctk.CTkFrame(row, fg_color="transparent")
+            row_content.pack(fill="x", padx=15, pady=12)
+            
+            ctk.CTkLabel(row_content, text=profile["display"], font=ctk.CTkFont(size=14, weight="bold")).pack(side="left")
+            
+            if profile["name"] == self.current_profile:
+                ctk.CTkLabel(row_content, text="ACTIVE", font=ctk.CTkFont(size=10), 
+                            text_color=COLORS["accent_success"]).pack(side="left", padx=10)
+            
+            GradientButton(row_content, text="Switch", style="primary" if profile["name"] != self.current_profile else "secondary",
+                          width=80, height=30, command=lambda p=profile["name"]: self._switch(p)).pack(side="right")
+        
+        # Close button
+        GradientButton(content, text="Close", style="secondary", width=100, command=self.destroy).pack(pady=(15, 0))
+    
+    def _switch(self, profile_name: str):
+        if self.on_switch:
+            self.on_switch(profile_name)
+        notify_profile_switched(profile_name)
+        self.destroy()
 
 
 # ============================================================================
@@ -190,10 +342,23 @@ class DashboardTab(ctk.CTkFrame):
         self._build_ui()
     
     def _build_ui(self):
-        # Header
-        ctk.CTkLabel(self, text="Dashboard", font=ctk.CTkFont(family="Segoe UI", size=28, weight="bold")).pack(anchor="w", pady=(0, 20))
+        # Header with Launch button
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.pack(fill="x", pady=(0, 20))
         
-        # Stats row - EXPANDED
+        ctk.CTkLabel(header, text="Dashboard", font=ctk.CTkFont(family="Segoe UI", size=28, weight="bold")).pack(side="left")
+        
+        # Launch Game Button
+        self.launch_btn = GradientButton(header, text="🚀 Launch Deadlock", style="success", 
+                                        width=180, height=42, command=self._launch_game)
+        self.launch_btn.pack(side="right")
+        
+        # Profile switcher
+        self.profile_btn = GradientButton(header, text="📁 Profiles", style="secondary",
+                                         width=100, height=42, command=self._show_profiles)
+        self.profile_btn.pack(side="right", padx=10)
+        
+        # Stats row
         stats_frame = ctk.CTkFrame(self, fg_color="transparent")
         stats_frame.pack(fill="x", pady=(0, 25))
         
@@ -209,7 +374,7 @@ class DashboardTab(ctk.CTkFrame):
         self.backups_stat = StatCard(stats_frame, "Backups", "0", "💾", COLORS["accent_secondary"])
         self.backups_stat.grid(row=0, column=2, padx=(10, 0), sticky="nsew")
         
-        # Quick Apply - EXPANDED
+        # Quick Apply
         ctk.CTkLabel(self, text="⚡ Quick Apply", font=ctk.CTkFont(family="Segoe UI", size=18, weight="bold"),
                     text_color=COLORS["text_secondary"]).pack(anchor="w", pady=(10, 15))
         
@@ -225,7 +390,7 @@ class DashboardTab(ctk.CTkFrame):
             card = QuickPresetCard(presets_grid, name, display, self._quick_apply)
             card.grid(row=0, column=i, padx=5, pady=5, sticky="nsew")
         
-        # Recent Activity - EXPANDED to fill remaining space
+        # Recent Activity
         ctk.CTkLabel(self, text="📋 Recent Activity", font=ctk.CTkFont(family="Segoe UI", size=18, weight="bold"),
                     text_color=COLORS["text_secondary"]).pack(anchor="w", pady=(10, 15))
         
@@ -235,6 +400,29 @@ class DashboardTab(ctk.CTkFrame):
         self.activity_placeholder = ctk.CTkLabel(self.activity_frame, text="No recent activity\n\nApply a config preset to see activity here",
                                                  font=ctk.CTkFont(size=13), text_color=COLORS["text_muted"])
         self.activity_placeholder.pack(expand=True, pady=50)
+    
+    def _launch_game(self):
+        """Launch Deadlock and optionally apply config"""
+        if self.app.deadlock_path:
+            # Ask if they want to apply current preset first
+            self.app.sidebar.set_status("Launching...", COLORS["accent_warning"])
+            notify_game_launched()
+            launch_deadlock()
+            self.app.sidebar.set_status("Game launched", COLORS["accent_success"])
+        else:
+            # Just launch anyway
+            launch_deadlock()
+    
+    def _show_profiles(self):
+        """Show profile switcher dialog"""
+        current = get_setting("last_profile", "default")
+        ProfileSwitchDialog(self.app, current, self._on_profile_switch)
+    
+    def _on_profile_switch(self, profile_name: str):
+        set_setting("last_profile", profile_name)
+        profile = load_profile(profile_name)
+        if profile and profile.get("preset") and self.app.deadlock_path:
+            self.app._apply_preset(profile["preset"])
     
     def _quick_apply(self, preset_name):
         if self.app.deadlock_path:
@@ -266,6 +454,7 @@ class PresetCard(ctk.CTkFrame):
         self.name = preset.get("name", "")
         self.on_select = on_select
         self.selected = selected
+        self.is_custom = preset.get("custom", False)
         self.accent = self.COLORS_MAP.get(self.name.lower(), COLORS["accent_primary"])
         
         self.configure(border_width=2, border_color=self.accent if selected else COLORS["border"])
@@ -273,11 +462,13 @@ class PresetCard(ctk.CTkFrame):
         self.bind("<Enter>", self._on_enter)
         self.bind("<Leave>", self._on_leave)
         
-        icon = ctk.CTkLabel(self, text=self.ICONS.get(self.name.lower(), "📦"), font=ctk.CTkFont(size=48))
+        icon_text = "⭐" if self.is_custom else self.ICONS.get(self.name.lower(), "📦")
+        icon = ctk.CTkLabel(self, text=icon_text, font=ctk.CTkFont(size=48))
         icon.pack(pady=(25, 10))
         icon.bind("<Button-1>", self._on_click)
         
-        self.title_label = ctk.CTkLabel(self, text=preset.get("display", self.name).replace(self.ICONS.get(self.name.lower(), ""), "").strip(),
+        display_name = preset.get("display", self.name).replace(self.ICONS.get(self.name.lower(), ""), "").replace("⭐", "").strip()
+        self.title_label = ctk.CTkLabel(self, text=display_name,
                                         font=ctk.CTkFont(family="Segoe UI", size=18, weight="bold"),
                                         text_color=self.accent if selected else COLORS["text_primary"])
         self.title_label.pack()
@@ -311,12 +502,28 @@ class PresetsTab(ctk.CTkFrame):
         header.pack(fill="x", pady=(0, 20))
         
         ctk.CTkLabel(header, text="Config Presets", font=ctk.CTkFont(family="Segoe UI", size=28, weight="bold")).pack(side="left")
-        GradientButton(header, text="Apply Selected", style="success", width=150, height=40, command=self._apply_selected).pack(side="right")
         
-        # Grid - EXPANDED
-        grid = ctk.CTkFrame(self, fg_color="transparent")
-        grid.pack(fill="both", expand=True)
+        # Buttons row
+        btn_frame = ctk.CTkFrame(header, fg_color="transparent")
+        btn_frame.pack(side="right")
         
+        GradientButton(btn_frame, text="📥 Import", style="secondary", width=100, height=40, command=self._import_preset).pack(side="left", padx=5)
+        GradientButton(btn_frame, text="⭐ Create", style="secondary", width=100, height=40, command=self._create_preset).pack(side="left", padx=5)
+        GradientButton(btn_frame, text="Apply Selected", style="success", width=150, height=40, command=self._apply_selected).pack(side="left", padx=5)
+        
+        # Scrollable grid for presets
+        self.grid_scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.grid_scroll.pack(fill="both", expand=True)
+        
+        self._refresh_presets()
+    
+    def _refresh_presets(self):
+        # Clear existing cards
+        for widget in self.grid_scroll.winfo_children():
+            widget.destroy()
+        self.cards.clear()
+        
+        # Get all presets (built-in + custom)
         presets = [
             {"name": "potato", "display": "🥔 Potato", "description": "Maximum FPS, minimum visuals. For low-end PCs."},
             {"name": "balanced", "display": "⚖️ Balanced", "description": "Best of both worlds. Recommended for most."},
@@ -329,13 +536,23 @@ class PresetsTab(ctk.CTkFrame):
             if actual: presets = actual
         except: pass
         
-        for i in range(4):
+        # Add custom presets
+        custom = list_custom_presets()
+        presets.extend(custom)
+        
+        # Create grid
+        grid = ctk.CTkFrame(self.grid_scroll, fg_color="transparent")
+        grid.pack(fill="both", expand=True)
+        
+        cols = 4
+        for i in range(cols):
             grid.grid_columnconfigure(i, weight=1)
-        grid.grid_rowconfigure(0, weight=1)
         
         for i, preset in enumerate(presets):
+            row = i // cols
+            col = i % cols
             card = PresetCard(grid, preset, self._on_select)
-            card.grid(row=0, column=i, padx=10, pady=10, sticky="nsew")
+            card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
             self.cards[preset["name"]] = card
     
     def _on_select(self, name):
@@ -349,10 +566,31 @@ class PresetsTab(ctk.CTkFrame):
     def _apply_selected(self):
         if self.selected:
             self.app._apply_preset(self.selected)
+    
+    def _create_preset(self):
+        """Open create preset dialog"""
+        if self.app.deadlock_path:
+            gameinfo = get_gameinfo_path(self.app.deadlock_path)
+            CreatePresetDialog(self.app, gameinfo, self._on_preset_created)
+    
+    def _on_preset_created(self, result):
+        self._refresh_presets()
+    
+    def _import_preset(self):
+        """Import a preset file"""
+        path = ctk.filedialog.askopenfilename(
+            title="Import Preset",
+            filetypes=[("Gameinfo files", "*.gi"), ("All files", "*.*")]
+        )
+        if path:
+            result = import_preset(Path(path))
+            if result:
+                self.app.sidebar.set_status("Preset imported", COLORS["accent_success"])
+                self._refresh_presets()
 
 
 # ============================================================================
-# ADVANCED TAB - FULL PAGE
+# ADVANCED TAB
 # ============================================================================
 
 class AdvancedTab(ctk.CTkFrame):
@@ -368,7 +606,7 @@ class AdvancedTab(ctk.CTkFrame):
         ctk.CTkLabel(header, text="Advanced Tweaks", font=ctk.CTkFont(family="Segoe UI", size=28, weight="bold")).pack(side="left")
         GradientButton(header, text="Apply Changes", style="success", width=150, height=40, command=self._apply).pack(side="right")
         
-        # ConVar panel - FILLS ENTIRE REMAINING SPACE
+        # ConVar panel
         self.panel = ConVarPanel(self, fg_color=COLORS["bg_card"], corner_radius=10)
         self.panel.pack(fill="both", expand=True)
     
@@ -424,6 +662,7 @@ class BackupsTab(ctk.CTkFrame):
         if self.app.deadlock_path:
             if create_backup(self.app.deadlock_path, label="manual"):
                 self.app.sidebar.set_status("Backup created", COLORS["accent_success"])
+                notify_backup_created()
                 self.refresh()
     
     def _restore(self, path):
@@ -445,7 +684,6 @@ class SettingsTab(ctk.CTkFrame):
     def _build_ui(self):
         ctk.CTkLabel(self, text="Settings", font=ctk.CTkFont(family="Segoe UI", size=28, weight="bold")).pack(anchor="w", pady=(0, 20))
         
-        # Scrollable settings
         scroll = ctk.CTkScrollableFrame(self, fg_color="transparent")
         scroll.pack(fill="both", expand=True)
         
@@ -460,6 +698,71 @@ class SettingsTab(ctk.CTkFrame):
         self.path_label = ctk.CTkLabel(path_content, text="Not detected", font=ctk.CTkFont(size=13), text_color=COLORS["text_secondary"])
         self.path_label.pack(anchor="w", pady=(8, 12))
         GradientButton(path_content, text="Browse", style="secondary", width=120, height=36, command=self.app._browse_path).pack(anchor="w")
+        
+        # Accent Color
+        color_section = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
+        color_section.pack(fill="x", pady=(0, 15))
+        
+        color_content = ctk.CTkFrame(color_section, fg_color="transparent")
+        color_content.pack(fill="x", padx=25, pady=20)
+        
+        ctk.CTkLabel(color_content, text="🎨 Accent Color", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(color_content, text="Choose your theme color", font=ctk.CTkFont(size=12), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 12))
+        
+        colors_frame = ctk.CTkFrame(color_content, fg_color="transparent")
+        colors_frame.pack(anchor="w")
+        
+        current_accent = get_setting("accent_color", "purple")
+        for color_name, color_info in ACCENT_COLORS.items():
+            btn = ctk.CTkButton(
+                colors_frame, text="", width=40, height=40, corner_radius=20,
+                fg_color=color_info["primary"], hover_color=color_info["hover"],
+                border_width=3 if color_name == current_accent else 0,
+                border_color=COLORS["text_primary"],
+                command=lambda c=color_name: self._set_accent(c)
+            )
+            btn.pack(side="left", padx=5)
+        
+        # System Tray
+        if TRAY_AVAILABLE:
+            tray_section = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
+            tray_section.pack(fill="x", pady=(0, 15))
+            
+            tray_content = ctk.CTkFrame(tray_section, fg_color="transparent")
+            tray_content.pack(fill="x", padx=25, pady=20)
+            
+            ctk.CTkLabel(tray_content, text="🔲 System Tray", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w")
+            
+            self.tray_var = ctk.BooleanVar(value=get_setting("minimize_to_tray", True))
+            ctk.CTkSwitch(tray_content, text="Minimize to system tray", variable=self.tray_var,
+                         command=lambda: set_setting("minimize_to_tray", self.tray_var.get())).pack(anchor="w", pady=(10, 0))
+        
+        # Notifications
+        if NOTIFICATIONS_AVAILABLE:
+            notif_section = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
+            notif_section.pack(fill="x", pady=(0, 15))
+            
+            notif_content = ctk.CTkFrame(notif_section, fg_color="transparent")
+            notif_content.pack(fill="x", padx=25, pady=20)
+            
+            ctk.CTkLabel(notif_content, text="🔔 Notifications", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w")
+            
+            self.notif_var = ctk.BooleanVar(value=get_setting("show_notifications", True))
+            ctk.CTkSwitch(notif_content, text="Show toast notifications", variable=self.notif_var,
+                         command=lambda: set_setting("show_notifications", self.notif_var.get())).pack(anchor="w", pady=(10, 0))
+        
+        # Startup
+        startup_section = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
+        startup_section.pack(fill="x", pady=(0, 15))
+        
+        startup_content = ctk.CTkFrame(startup_section, fg_color="transparent")
+        startup_content.pack(fill="x", padx=25, pady=20)
+        
+        ctk.CTkLabel(startup_content, text="🚀 Startup", font=ctk.CTkFont(size=16, weight="bold")).pack(anchor="w")
+        
+        self.startup_var = ctk.BooleanVar(value=is_startup_enabled())
+        ctk.CTkSwitch(startup_content, text="Launch on Windows startup", variable=self.startup_var,
+                     command=self._toggle_startup).pack(anchor="w", pady=(10, 0))
         
         # Updates
         update_section = ctk.CTkFrame(scroll, fg_color=COLORS["bg_card"], corner_radius=10)
@@ -483,6 +786,22 @@ class SettingsTab(ctk.CTkFrame):
         GradientButton(links_content, text="GitHub", style="secondary", width=120, height=36,
                       command=lambda: webbrowser.open("https://github.com/BradyM37/Config-Manager")).pack(anchor="w")
     
+    def _set_accent(self, color_name: str):
+        global COLORS
+        set_setting("accent_color", color_name)
+        COLORS = get_colors(color_name)
+        
+        # Would need to rebuild UI for full effect - show message
+        self.app.sidebar.set_status("Restart to apply", COLORS["accent_warning"])
+    
+    def _toggle_startup(self):
+        enabled = self.startup_var.get()
+        if set_startup_enabled(enabled):
+            self.app.sidebar.set_status("Startup " + ("enabled" if enabled else "disabled"), COLORS["accent_success"])
+        else:
+            self.startup_var.set(not enabled)
+            self.app.sidebar.set_status("Failed to update", COLORS["accent_danger"])
+    
     def refresh(self):
         if self.app.deadlock_path:
             self.path_label.configure(text=str(self.app.deadlock_path))
@@ -496,6 +815,11 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         
+        # Load settings first
+        settings = load_settings()
+        global COLORS
+        COLORS = get_colors(settings.get("accent_color", "purple"))
+        
         self.title(APP_NAME)
         self.geometry("1100x750")
         self.minsize(950, 650)
@@ -504,9 +828,19 @@ class App(ctk.CTk):
         self.deadlock_path: Optional[Path] = None
         self.selected_preset: Optional[str] = None
         self.tabs = {}
+        self._minimized_to_tray = False
+        
+        # Handle close/minimize
+        self.protocol("WM_DELETE_WINDOW", self._on_close)
+        self.bind("<Unmap>", self._on_minimize)
         
         self._build_ui()
+        self._init_tray()
         self.after(100, self._detect_deadlock)
+        
+        # Check for --minimized arg
+        if "--minimized" in sys.argv:
+            self.after(500, self._minimize_to_tray)
     
     def _build_ui(self):
         self.sidebar = Sidebar(self, self._navigate)
@@ -530,6 +864,51 @@ class App(ctk.CTk):
         }
         
         self._navigate("dashboard")
+    
+    def _init_tray(self):
+        """Initialize system tray"""
+        if TRAY_AVAILABLE and get_setting("minimize_to_tray", True):
+            icon_path = Path(__file__).parent.parent.parent / "assets" / "icon.ico"
+            init_tray(
+                on_show=self._show_from_tray,
+                on_quit=self._quit,
+                on_preset=self._tray_apply_preset,
+                icon_path=icon_path if icon_path.exists() else None
+            )
+    
+    def _on_close(self):
+        """Handle window close"""
+        if TRAY_AVAILABLE and get_setting("minimize_to_tray", True):
+            self._minimize_to_tray()
+        else:
+            self._quit()
+    
+    def _on_minimize(self, event=None):
+        """Handle window minimize"""
+        if TRAY_AVAILABLE and get_setting("minimize_to_tray", True) and self.state() == "iconic":
+            self.after(100, self._minimize_to_tray)
+    
+    def _minimize_to_tray(self):
+        """Minimize to system tray"""
+        self._minimized_to_tray = True
+        self.withdraw()
+    
+    def _show_from_tray(self):
+        """Show window from tray"""
+        self._minimized_to_tray = False
+        self.deiconify()
+        self.lift()
+        self.focus_force()
+    
+    def _tray_apply_preset(self, preset_name: str):
+        """Apply preset from tray menu"""
+        if self.deadlock_path:
+            self._apply_preset(preset_name)
+    
+    def _quit(self):
+        """Actually quit the app"""
+        stop_tray()
+        self.destroy()
     
     def _navigate(self, tab_id):
         for tab in self.tabs.values():
@@ -580,11 +959,23 @@ class App(ctk.CTk):
         
         self.sidebar.set_status("Applying...", COLORS["accent_warning"])
         
+        # Check built-in presets first
         presets = list_presets()
         preset = next((p for p in presets if p["name"] == preset_name), None)
         
+        # Check custom presets if not found
+        if not preset:
+            custom = list_custom_presets()
+            preset = next((p for p in custom if p["name"] == preset_name), None)
+        
         if preset and apply_preset(self.deadlock_path, preset["path"]):
             self.sidebar.set_status(f"Applied {preset_name}", COLORS["accent_success"])
+            set_setting("last_preset", preset_name)
+            
+            # Show notification
+            if get_setting("show_notifications", True):
+                notify_preset_applied(preset_name)
+            
             self.dashboard.refresh()
         else:
             self.sidebar.set_status("Failed", COLORS["accent_danger"])
