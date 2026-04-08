@@ -129,6 +129,8 @@ def apply_update(update_path: Path) -> bool:
     """
     Apply a downloaded update (replace current exe and restart)
     
+    Uses a batch file for maximum compatibility (PowerShell can have issues)
+    
     Args:
         update_path: Path to the downloaded update file
     
@@ -136,6 +138,7 @@ def apply_update(update_path: Path) -> bool:
         True if update process started, False if failed
     """
     if not update_path.exists():
+        print(f"Update file not found: {update_path}")
         return False
     
     try:
@@ -146,61 +149,71 @@ def apply_update(update_path: Path) -> bool:
             print("Auto-update only works with compiled .exe")
             return False
         
-        # Create a PowerShell script that:
-        # 1. Waits for the current process to fully exit (by PID)
-        # 2. Waits extra time for file handles to release
-        # 3. Replaces the exe
-        # 4. Starts the new exe
-        # 5. Cleans up
+        # Create a batch file that:
+        # 1. Waits for the current process to exit (using tasklist polling)
+        # 2. Replaces the exe with retries
+        # 3. Starts the new exe
+        # 4. Cleans up
         
         current_pid = os.getpid()
-        ps_path = update_path.parent / "update.ps1"
+        bat_path = update_path.parent / "update.bat"
         
-        ps_content = f'''
-$ErrorActionPreference = "SilentlyContinue"
+        # Use short paths to avoid issues with spaces
+        update_path_str = str(update_path)
+        current_exe_str = str(current_exe)
+        
+        bat_content = f'''@echo off
+setlocal
 
-# Wait for the main process to exit
-$process = Get-Process -Id {current_pid} -ErrorAction SilentlyContinue
-if ($process) {{
-    $process.WaitForExit()
-}}
+:: Wait for the main process to exit
+:waitloop
+tasklist /FI "PID eq {current_pid}" 2>NUL | find /I "{current_pid}" >NUL
+if not errorlevel 1 (
+    timeout /t 1 /nobreak >NUL
+    goto waitloop
+)
 
-# Extra wait for file handles to release
-Start-Sleep -Seconds 3
+:: Extra wait for file handles to release
+timeout /t 2 /nobreak >NUL
 
-# Try to copy with retries
-$maxRetries = 10
-$retryCount = 0
-$success = $false
+:: Try to copy with retries
+set retries=0
+:copyloop
+copy /Y "{update_path_str}" "{current_exe_str}" >NUL 2>&1
+if errorlevel 1 (
+    set /a retries+=1
+    if %retries% lss 15 (
+        timeout /t 1 /nobreak >NUL
+        goto copyloop
+    )
+    echo Update failed after retries
+    pause
+    goto cleanup
+)
 
-while (-not $success -and $retryCount -lt $maxRetries) {{
-    try {{
-        Copy-Item -Path "{update_path}" -Destination "{current_exe}" -Force
-        $success = $true
-    }} catch {{
-        $retryCount++
-        Start-Sleep -Seconds 1
-    }}
-}}
+:: Start the new exe
+start "" "{current_exe_str}"
 
-if ($success) {{
-    # Start the new exe
-    Start-Process -FilePath "{current_exe}"
-}}
+:cleanup
+:: Clean up downloaded file
+del /f /q "{update_path_str}" >NUL 2>&1
 
-# Clean up
-Remove-Item -Path "{update_path}" -Force -ErrorAction SilentlyContinue
-Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
+:: Self-delete this batch file
+(goto) 2>NUL & del /f /q "%~f0"
 '''
         
-        with open(ps_path, 'w', encoding='utf-8') as f:
-            f.write(ps_content)
+        with open(bat_path, 'w', encoding='utf-8') as f:
+            f.write(bat_content)
         
-        # Start PowerShell script hidden and detached
+        # Start batch file hidden and detached
+        # Using cmd /c with start to fully detach
         subprocess.Popen(
-            ['powershell', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', str(ps_path)],
+            f'cmd /c start /min "" "{bat_path}"',
+            shell=True,
             creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS,
-            start_new_session=True
+            start_new_session=True,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
         )
         
         return True
