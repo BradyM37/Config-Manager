@@ -1,6 +1,42 @@
 {
   "categories": [
     {
+      "name": "Performance",
+      "icon": "⚡",
+      "convars": [
+        {
+          "name": "fps_max",
+          "display": "FPS Limit",
+          "type": "slider",
+          "min": 0,
+          "max": 400,
+          "step": 10,
+          "default": "0",
+          "description": "Maximum FPS (0 = unlimited)"
+        },
+        {
+          "name": "r_farz",
+          "display": "Render Distance",
+          "type": "slider",
+          "min": 3000,
+          "max": 16000,
+          "step": 1000,
+          "default": "16000",
+          "description": "Far clipping plane distance"
+        },
+        {
+          "name": "r_size_cull_threshold",
+          "display": "Object Culling",
+          "type": "slider",
+          "min": 0,
+          "max": 2,
+          "step": 0.1,
+          "default": "0.8",
+          "description": "Cull small objects (higher = more FPS)"
+        }
+      ]
+    },
+    {
       "name": "Shadows",
       "icon": "🌑",
       "convars": [
@@ -20,6 +56,16 @@
           "default": "2",
           "labels": ["Off", "Low", "Medium", "High"],
           "description": "Shadow quality level"
+        },
+        {
+          "name": "r_shadow_resolution",
+          "display": "Shadow Resolution",
+          "type": "slider",
+          "min": 256,
+          "max": 4096,
+          "step": 256,
+          "default": "1024",
+          "description": "Shadow map resolution"
         }
       ]
     },
@@ -47,6 +93,20 @@
           "type": "toggle",
           "default": "1",
           "description": "Static map lighting"
+        },
+        {
+          "name": "r_ssr",
+          "display": "Screen Space Reflections",
+          "type": "toggle",
+          "default": "1",
+          "description": "Real-time reflections"
+        },
+        {
+          "name": "lb_enable_global_illumination",
+          "display": "Global Illumination",
+          "type": "toggle",
+          "default": "1",
+          "description": "Indirect lighting (expensive)"
         }
       ]
     },
@@ -84,6 +144,20 @@
           "default": "3",
           "labels": ["Lowest", "Low", "Medium", "High"],
           "description": "Particle effect detail level"
+        },
+        {
+          "name": "r_motion_blur_enabled",
+          "display": "Motion Blur",
+          "type": "toggle",
+          "default": "1",
+          "description": "Camera motion blur"
+        },
+        {
+          "name": "r_volumetric_fog",
+          "display": "Volumetric Fog",
+          "type": "toggle",
+          "default": "1",
+          "description": "3D fog effects"
         }
       ]
     },
@@ -114,38 +188,25 @@
       ]
     },
     {
-      "name": "Rendering",
-      "icon": "🎮",
+      "name": "Anti-Aliasing",
+      "icon": "🔲",
       "convars": [
         {
-          "name": "r_farz",
-          "display": "Render Distance",
-          "type": "slider",
-          "min": 3000,
-          "max": 16000,
-          "step": 1000,
-          "default": "16000",
-          "description": "Far clipping plane distance"
-        },
-        {
-          "name": "r_size_cull_threshold",
-          "display": "Object Culling",
-          "type": "slider",
-          "min": 0.5,
-          "max": 2.0,
-          "step": 0.1,
-          "default": "0.8",
-          "description": "Cull small objects (higher = more culling)"
-        },
-        {
-          "name": "fps_max",
-          "display": "FPS Limit",
+          "name": "r_antialias_quality",
+          "display": "AA Quality",
           "type": "slider",
           "min": 0,
-          "max": 400,
-          "step": 10,
+          "max": 3,
+          "default": "2",
+          "labels": ["Off", "Low", "Medium", "High"],
+          "description": "Anti-aliasing quality"
+        },
+        {
+          "name": "r_fxaa",
+          "display": "FXAA",
+          "type": "toggle",
           "default": "0",
-          "description": "Maximum FPS (0 = unlimited)"
+          "description": "Fast approximate anti-aliasing"
         }
       ]
     },
@@ -157,7 +218,7 @@
           "name": "r_citadel_npr_outlines",
           "display": "Enemy Outlines",
           "type": "toggle",
-          "default": "true",
+          "default": "1",
           "description": "Outlines on enemy players"
         },
         {
@@ -171,13 +232,23 @@
           "name": "sc_clutter_enable",
           "display": "Clutter Props",
           "type": "toggle",
-          "default": "true",
+          "default": "1",
           "description": "Small debris and clutter"
+        },
+        {
+          "name": "r_lod_quality",
+          "display": "Model Detail",
+          "type": "slider",
+          "min": 0,
+          "max": 3,
+          "default": "2",
+          "labels": ["Low", "Medium", "High", "Ultra"],
+          "description": "Model level of detail"
         }
       ]
     },
     {
-      "name": "UI",
+      "name": "UI & HUD",
       "icon": "🖥️",
       "convars": [
         {
@@ -193,6 +264,42 @@
           "type": "toggle_inverse",
           "default": "0",
           "description": "Box shadows in UI"
+        },
+        {
+          "name": "hud_scaling",
+          "display": "HUD Scale",
+          "type": "slider",
+          "min": 0.5,
+          "max": 1.5,
+          "step": 0.1,
+          "default": "1.0",
+          "description": "HUD element size"
+        }
+      ]
+    },
+    {
+      "name": "Audio",
+      "icon": "🔊",
+      "convars": [
+        {
+          "name": "snd_musicvolume",
+          "display": "Music Volume",
+          "type": "slider",
+          "min": 0,
+          "max": 1,
+          "step": 0.1,
+          "default": "0.5",
+          "description": "Background music volume"
+        },
+        {
+          "name": "snd_gamevolume",
+          "display": "Game Volume",
+          "type": "slider",
+          "min": 0,
+          "max": 1,
+          "step": 0.1,
+          "default": "1.0",
+          "description": "Overall game sound"
         }
       ]
     }

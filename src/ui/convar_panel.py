@@ -4,6 +4,7 @@ Sliders and toggles for individual convar adjustments
 """
 
 import json
+import re
 import customtkinter as ctk
 from pathlib import Path
 from typing import Callable, Optional
@@ -19,6 +20,45 @@ def load_convar_definitions() -> dict:
     except Exception as e:
         print(f"Failed to load convars.json: {e}")
         return {"categories": []}
+
+
+def read_current_convars(gameinfo_path: Path) -> dict[str, str]:
+    """
+    Read current convar values from gameinfo.gi
+    
+    Returns:
+        Dict of convar_name -> value
+    """
+    convars = {}
+    
+    if not gameinfo_path or not gameinfo_path.exists():
+        return convars
+    
+    try:
+        with open(gameinfo_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        
+        # Find the ConVars section
+        convars_match = re.search(r'ConVars\s*\{(.+?)^\s*\}', content, re.MULTILINE | re.DOTALL)
+        
+        if convars_match:
+            convars_section = convars_match.group(1)
+            
+            # Parse convar lines: name "value" or name value
+            pattern = r'^\s*([a-z_][a-z0-9_]*)\s+["\']?([^"\'}\n]+)["\']?'
+            
+            for match in re.finditer(pattern, convars_section, re.MULTILINE | re.IGNORECASE):
+                name = match.group(1).strip()
+                value = match.group(2).strip().strip('"\'')
+                
+                # Skip comments and section headers
+                if not name.startswith('//'):
+                    convars[name] = value
+    
+    except Exception as e:
+        print(f"Failed to read convars: {e}")
+    
+    return convars
 
 
 class ConVarToggle(ctk.CTkFrame):
@@ -262,10 +302,12 @@ class ConVarCategory(ctk.CTkFrame):
 class ConVarPanel(ctk.CTkScrollableFrame):
     """Main convar tweaks panel with all categories"""
     
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, gameinfo_path: Optional[Path] = None, **kwargs):
         super().__init__(parent, **kwargs)
         
+        self.gameinfo_path = gameinfo_path
         self.categories: list[ConVarCategory] = []
+        self.all_controls: dict[str, any] = {}  # Track all controls by convar name
         self._build_panel()
     
     def _build_panel(self):
@@ -280,6 +322,21 @@ class ConVarPanel(ctk.CTkScrollableFrame):
             )
             category.pack(fill="x", pady=5, padx=5)
             self.categories.append(category)
+            
+            # Track all controls
+            self.all_controls.update(category.controls)
+    
+    def load_current_values(self, gameinfo_path: Path):
+        """Load current values from gameinfo.gi and update all controls"""
+        self.gameinfo_path = gameinfo_path
+        current_values = read_current_convars(gameinfo_path)
+        
+        for name, value in current_values.items():
+            if name in self.all_controls:
+                try:
+                    self.all_controls[name].set_value(value)
+                except Exception as e:
+                    print(f"Failed to set {name} = {value}: {e}")
     
     def get_all_values(self) -> dict[str, str]:
         """Get all convar values from all categories"""

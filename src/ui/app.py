@@ -604,14 +604,45 @@ class AdvancedTab(ctk.CTkFrame):
         header.pack(fill="x", pady=(0, 20))
         
         ctk.CTkLabel(header, text="Advanced Tweaks", font=ctk.CTkFont(family="Segoe UI", size=28, weight="bold")).pack(side="left")
-        GradientButton(header, text="Apply Changes", style="success", width=150, height=40, command=self._apply).pack(side="right")
+        
+        btn_frame = ctk.CTkFrame(header, fg_color="transparent")
+        btn_frame.pack(side="right")
+        
+        GradientButton(btn_frame, text="🔄 Reload", style="secondary", width=100, height=40, command=self.refresh).pack(side="left", padx=5)
+        GradientButton(btn_frame, text="Apply Changes", style="success", width=150, height=40, command=self._apply).pack(side="left", padx=5)
+        
+        # Status label
+        self.status_label = ctk.CTkLabel(self, text="", font=ctk.CTkFont(size=12), text_color=COLORS["text_muted"])
+        self.status_label.pack(anchor="w", pady=(0, 10))
         
         # ConVar panel
         self.panel = ConVarPanel(self, fg_color=COLORS["bg_card"], corner_radius=10)
         self.panel.pack(fill="both", expand=True)
     
+    def refresh(self):
+        """Load current values from gameinfo.gi"""
+        if self.app.deadlock_path:
+            gameinfo = get_gameinfo_path(self.app.deadlock_path)
+            self.panel.load_current_values(gameinfo)
+            self.status_label.configure(text="✓ Loaded current settings from gameinfo.gi", text_color=COLORS["accent_success"])
+        else:
+            self.status_label.configure(text="⚠ Game not detected - showing defaults", text_color=COLORS["accent_warning"])
+    
     def _apply(self):
-        self.app.sidebar.set_status("Applied tweaks", COLORS["accent_success"])
+        """Apply convar changes to gameinfo.gi"""
+        if not self.app.deadlock_path:
+            self.app.sidebar.set_status("No game found", COLORS["accent_warning"])
+            return
+        
+        from src.core.config import modify_convars
+        
+        values = self.panel.get_all_values()
+        
+        if modify_convars(self.app.deadlock_path, values):
+            self.app.sidebar.set_status("Applied tweaks", COLORS["accent_success"])
+            self.status_label.configure(text=f"✓ Applied {len(values)} settings", text_color=COLORS["accent_success"])
+        else:
+            self.app.sidebar.set_status("Some changes failed", COLORS["accent_warning"])
 
 
 # ============================================================================
