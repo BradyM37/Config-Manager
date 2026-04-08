@@ -383,15 +383,48 @@ def install_community_preset(preset_id: str, deadlock_path: Path) -> bool:
             return write_video_settings(deadlock_path, video_settings, backup=False)
         return False
     else:
-        # Legacy format: convars only (gameinfo.gi)
+        # Legacy format: auto-detect and route settings to correct files
         convars = preset_data.get("convars", {})
         
         if not convars:
             print("Preset has no convars")
             return False
         
-        gameinfo_path = get_gameinfo_path(deadlock_path)
-        return apply_convars_to_gameinfo(gameinfo_path, convars)
+        # Known video.txt settings (these go to video.txt, not gameinfo.gi)
+        VIDEO_SETTINGS = {
+            'r_shadows', 'r_citadel_shadow_quality', 'csm_max_shadow_dist_override',
+            'csm_max_num_cascades_override', 'lb_enable_shadow_casting', 'lb_dynamic_shadow_resolution',
+            'r_citadel_ssao', 'r_citadel_ssao_quality', 'r_citadel_distancefield_ao_quality',
+            'r_effects_bloom', 'r_post_bloom', 'r_depth_of_field', 'r_citadel_fog_quality',
+            'r_particle_max_detail_level', 'r_particle_shadows', 'r_texture_stream_mip_bias',
+            'r_dashboard_render_quality', 'r_area_lights', 'r_arealights',
+            'gpu_level', 'cpu_level', 'r_citadel_motion_blur', 'r_citadel_antialiasing',
+            'r_citadel_outlines', 'r_ssao', 'r_volumetric_fog', 'r_motion_blur_enabled',
+            'r_antialias_quality'
+        }
+        
+        # Split settings by destination
+        video_settings = {}
+        gameinfo_convars = {}
+        
+        for name, value in convars.items():
+            if name in VIDEO_SETTINGS:
+                video_settings[name] = value
+            else:
+                gameinfo_convars[name] = value
+        
+        success = True
+        
+        # Apply video settings
+        if video_settings:
+            success = write_video_settings(deadlock_path, video_settings, backup=False) and success
+        
+        # Apply gameinfo convars
+        if gameinfo_convars:
+            gameinfo_path = get_gameinfo_path(deadlock_path)
+            success = apply_convars_to_gameinfo(gameinfo_path, gameinfo_convars) and success
+        
+        return success
 
 
 def get_installed_community_presets() -> list[str]:
