@@ -1680,7 +1680,8 @@ class App(ctk.CTk):
         if tab_id in self.tabs:
             self.tabs[tab_id].pack(fill="both", expand=True)
             self.sidebar.set_active(tab_id)
-            if hasattr(self.tabs[tab_id], 'refresh'):
+            # Auto-refresh tabs except Advanced (user controls refresh manually there)
+            if tab_id != "advanced" and hasattr(self.tabs[tab_id], 'refresh'):
                 self.tabs[tab_id].refresh()
     
     def _detect_deadlock(self):
