@@ -300,6 +300,16 @@
       "icon": "🎯",
       "convars": [
         {
+          "name": "citadel_camera_hero_fov",
+          "display": "Field of View",
+          "type": "slider",
+          "min": 70,
+          "max": 120,
+          "step": 1,
+          "default": "90",
+          "description": "Camera field of view (higher = wider)"
+        },
+        {
           "name": "citadel_camera_sensitivity",
           "display": "Camera Sensitivity",
           "type": "slider",
