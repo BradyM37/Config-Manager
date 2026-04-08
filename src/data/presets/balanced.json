@@ -1,0 +1,26 @@
+{
+  "name": "balanced",
+  "display": "⚖️ Balanced",
+  "description": "Best of both worlds. Recommended for most.",
+  "convars": {
+    "fps_max": "0",
+    "r_shadows": "1",
+    "r_citadel_shadow_quality": "1",
+    "lb_enable_stationary_lights": "1",
+    "lb_enable_dynamic_lights": "0",
+    "r_ssao": "1",
+    "r_effects_bloom": "1",
+    "r_depth_of_field": "0",
+    "r_particle_max_detail_level": "2",
+    "sc_clutter_enable": "0",
+    "r_grass_quality": "1",
+    "r_texture_stream_mip_bias": "1",
+    "r_texturefilteringquality": "2",
+    "r_farz": "14000",
+    "r_size_cull_threshold": "1.0",
+    "panorama_disable_blur": "1",
+    "panorama_disable_box_shadow": "0",
+    "r_citadel_npr_outlines": "1",
+    "r_citadel_outlines": "1"
+  }
+}

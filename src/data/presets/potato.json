@@ -1,0 +1,26 @@
+{
+  "name": "potato",
+  "display": "🥔 Potato",
+  "description": "Maximum FPS, minimum visuals. For low-end PCs.",
+  "convars": {
+    "fps_max": "0",
+    "r_shadows": "0",
+    "r_citadel_shadow_quality": "0",
+    "lb_enable_stationary_lights": "0",
+    "lb_enable_dynamic_lights": "0",
+    "r_ssao": "0",
+    "r_effects_bloom": "0",
+    "r_depth_of_field": "0",
+    "r_particle_max_detail_level": "0",
+    "sc_clutter_enable": "0",
+    "r_grass_quality": "0",
+    "r_texture_stream_mip_bias": "3",
+    "r_texturefilteringquality": "0",
+    "r_farz": "10000",
+    "r_size_cull_threshold": "1.5",
+    "panorama_disable_blur": "1",
+    "panorama_disable_box_shadow": "1",
+    "r_citadel_npr_outlines": "1",
+    "r_citadel_outlines": "1"
+  }
+}
