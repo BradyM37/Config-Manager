@@ -2,8 +2,8 @@
   "name": "competitive",
   "display": "🎯 Competitive",
   "description": "Max visibility and FPS for ranked play.",
-  "type": "video",
-  "settings": {
+  "type": "both",
+  "video": {
     "r_shadows": "1",
     "r_citadel_shadow_quality": "0",
     "csm_max_shadow_dist_override": "1000",
@@ -25,6 +25,26 @@
     "r_arealights": "false",
     "r_citadel_outlines": "1",
     "gpu_level": "1",
-    "cpu_level": "1"
+    "cpu_level": "1",
+    "r_citadel_motion_blur": "0",
+    "r_citadel_antialiasing": "1"
+  },
+  "convars": {
+    "lb_enable_dynamic_lights": "1",
+    "lb_enable_stationary_lights": "1",
+    "r_ssr": "0",
+    "lb_enable_global_illumination": "0",
+    "r_indirect_diffuse": "0",
+    "r_drawparticles": "1",
+    "r_decals": "1",
+    "r_grass": "0",
+    "r_foliage": "0",
+    "sc_clutter_enable": "0",
+    "r_lod_quality": "1",
+    "r_farz": "16000",
+    "r_lod_switch_scale": "0.75",
+    "citadel_trooper_glow_disabled": "1",
+    "panorama_disable_blur": "1",
+    "panorama_disable_box_shadow": "0"
   }
 }

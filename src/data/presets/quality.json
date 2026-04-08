@@ -2,8 +2,8 @@
   "name": "quality",
   "display": "💎 Quality",
   "description": "Beautiful visuals for mid-high end PCs.",
-  "type": "video",
-  "settings": {
+  "type": "both",
+  "video": {
     "r_shadows": "1",
     "r_citadel_shadow_quality": "2",
     "csm_max_shadow_dist_override": "3000",
@@ -24,6 +24,25 @@
     "r_area_lights": "1",
     "r_arealights": "true",
     "gpu_level": "2",
-    "cpu_level": "2"
+    "cpu_level": "2",
+    "r_citadel_motion_blur": "0",
+    "r_citadel_antialiasing": "3"
+  },
+  "convars": {
+    "lb_enable_dynamic_lights": "1",
+    "lb_enable_stationary_lights": "1",
+    "r_ssr": "1",
+    "lb_enable_global_illumination": "1",
+    "r_indirect_diffuse": "1",
+    "r_drawparticles": "1",
+    "r_decals": "1",
+    "r_grass": "1",
+    "r_foliage": "1",
+    "sc_clutter_enable": "1",
+    "r_lod_quality": "2",
+    "r_farz": "16000",
+    "r_lod_switch_scale": "1.5",
+    "panorama_disable_blur": "0",
+    "panorama_disable_box_shadow": "0"
   }
 }

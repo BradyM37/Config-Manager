@@ -141,11 +141,24 @@ def apply_preset(deadlock_path: Path, preset_path_or_name, backup: bool = True) 
         
         preset_type = preset.get("type", "json")
         
-        if preset_type == "video":
-            # New video.txt based presets (modifies graphics settings)
+        if preset_type == "both":
+            # Full preset: applies video.txt settings AND gameinfo.gi convars
+            success = True
+            video_settings = preset.get("video", {})
+            convar_settings = preset.get("convars", {})
+            
+            if video_settings:
+                success = write_video_settings(deadlock_path, video_settings, backup=False) and success
+            if convar_settings:
+                gameinfo_path = get_gameinfo_path(deadlock_path)
+                success = apply_convars_to_gameinfo(gameinfo_path, convar_settings) and success
+            
+            return success
+        elif preset_type == "video":
+            # Video.txt only presets (graphics settings)
             return write_video_settings(deadlock_path, preset.get("settings", {}), backup=False)
         elif preset_type == "json":
-            # Legacy gameinfo.gi convars
+            # Legacy gameinfo.gi convars only
             gameinfo_path = get_gameinfo_path(deadlock_path)
             return apply_convars_to_gameinfo(gameinfo_path, preset.get("convars", {}))
         else:
