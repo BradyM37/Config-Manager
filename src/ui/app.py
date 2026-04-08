@@ -17,7 +17,7 @@ from src.core.updater import check_for_updates, download_update, apply_update
 from src.core.settings import (
     load_settings, save_settings, get_setting, set_setting,
     ACCENT_COLORS, list_profiles, save_profile, load_profile,
-    list_custom_presets, save_custom_preset, export_preset, import_preset,
+    list_custom_presets, save_custom_preset, export_preset, import_preset, delete_custom_preset,
     launch_deadlock, is_deadlock_running, is_startup_enabled, set_startup_enabled,
     GameLaunchWatcher, register_hotkey, start_hotkey_listener, stop_hotkey_listener,
     get_hotkey_presets, set_hotkey_preset
@@ -709,11 +709,12 @@ class PresetCard(ctk.CTkFrame):
     ICONS = {"potato": "🥔", "balanced": "⚖️", "quality": "💎", "competitive": "🎯"}
     COLORS_MAP = {"potato": "#f59e0b", "balanced": "#8b5cf6", "quality": "#06b6d4", "competitive": "#ef4444"}
     
-    def __init__(self, parent, preset: dict, on_select, selected=False, **kwargs):
+    def __init__(self, parent, preset: dict, on_select, on_delete=None, selected=False, **kwargs):
         super().__init__(parent, fg_color=COLORS["bg_card"], corner_radius=12, **kwargs)
         self.preset = preset
         self.name = preset.get("name", "")
         self.on_select = on_select
+        self.on_delete = on_delete
         self.selected = selected
         self.is_custom = preset.get("custom", False)
         self.accent = self.COLORS_MAP.get(self.name.lower(), COLORS["accent_primary"])
@@ -722,6 +723,14 @@ class PresetCard(ctk.CTkFrame):
         self.bind("<Button-1>", self._on_click)
         self.bind("<Enter>", self._on_enter)
         self.bind("<Leave>", self._on_leave)
+        
+        # Delete button for custom presets (top right corner)
+        if self.is_custom and on_delete:
+            self.delete_btn = ctk.CTkButton(self, text="✕", width=24, height=24,
+                                           fg_color="transparent", hover_color=COLORS["accent_danger"],
+                                           text_color=COLORS["text_muted"], font=ctk.CTkFont(size=14),
+                                           command=self._on_delete_click)
+            self.delete_btn.place(relx=1.0, rely=0, x=-8, y=8, anchor="ne")
         
         icon_text = "⭐" if self.is_custom else self.ICONS.get(self.name.lower(), "📦")
         icon = ctk.CTkLabel(self, text=icon_text, font=ctk.CTkFont(size=48))
@@ -739,6 +748,9 @@ class PresetCard(ctk.CTkFrame):
                     text_color=COLORS["text_muted"], wraplength=160).pack(pady=(8, 25), padx=15)
     
     def _on_click(self, e=None): self.on_select(self.name)
+    def _on_delete_click(self):
+        if self.on_delete:
+            self.on_delete(self.name)
     def _on_enter(self, e=None):
         if not self.selected: self.configure(border_color=self.accent)
     def _on_leave(self, e=None):
@@ -812,7 +824,7 @@ class PresetsTab(ctk.CTkFrame):
         for i, preset in enumerate(presets):
             row = i // cols
             col = i % cols
-            card = PresetCard(grid, preset, self._on_select)
+            card = PresetCard(grid, preset, self._on_select, on_delete=self._delete_preset if preset.get("custom") else None)
             card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
             self.cards[preset["name"]] = card
     
@@ -848,6 +860,22 @@ class PresetsTab(ctk.CTkFrame):
             if result:
                 self.app.sidebar.set_status("Preset imported", COLORS["accent_success"])
                 self._refresh_presets()
+    
+    def _delete_preset(self, name: str):
+        """Delete a custom preset"""
+        # Confirm deletion
+        confirm = ctk.CTkInputDialog(
+            text=f"Type 'delete' to confirm removing '{name}':",
+            title="Delete Preset"
+        )
+        if confirm.get_input() == "delete":
+            if delete_custom_preset(name):
+                self.app.sidebar.set_status(f"Deleted '{name}'", COLORS["accent_success"])
+                if self.selected == name:
+                    self.selected = None
+                self._refresh_presets()
+            else:
+                self.app.sidebar.set_status("Failed to delete preset", COLORS["accent_danger"])
 
 
 # ============================================================================

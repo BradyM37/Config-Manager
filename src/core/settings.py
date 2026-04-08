@@ -260,6 +260,27 @@ def import_preset(import_path: Path, name: str = None) -> Optional[Path]:
         return None
 
 
+def delete_custom_preset(name: str) -> bool:
+    """Delete a custom preset by name"""
+    presets_dir = get_custom_presets_dir()
+    safe_name = "".join(c for c in name if c.isalnum() or c in " _-").strip()
+    preset_path = presets_dir / f"{safe_name}.gi"
+    meta_path = presets_dir / f"{safe_name}.meta.json"
+    
+    success = False
+    try:
+        if preset_path.exists():
+            preset_path.unlink()
+            success = True
+        if meta_path.exists():
+            meta_path.unlink()
+    except Exception as e:
+        print(f"Failed to delete preset: {e}")
+        return False
+    
+    return success
+
+
 # ============================================================================
 # STARTUP
 # ============================================================================
