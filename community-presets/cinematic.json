@@ -1,0 +1,31 @@
+{
+  "name": "Cinematic Mode",
+  "author": "community",
+  "description": "Beautiful visuals for content creation and screenshots",
+  "convars": {
+    "fps_max": "60",
+    "r_shadows": "1",
+    "r_citadel_shadow_quality": "3",
+    "lb_enable_stationary_lights": "1",
+    "lb_enable_dynamic_lights": "1",
+    "lb_enable_global_illumination": "1",
+    "r_ssao": "1",
+    "r_ssr": "1",
+    "r_effects_bloom": "1",
+    "r_depth_of_field": "1",
+    "r_motion_blur_enabled": "1",
+    "r_volumetric_fog": "1",
+    "r_particle_max_detail_level": "3",
+    "sc_clutter_enable": "1",
+    "r_grass": "1",
+    "r_foliage": "1",
+    "r_grass_quality": "2",
+    "r_texture_stream_mip_bias": "0",
+    "r_texturefilteringquality": "5",
+    "r_farz": "20000",
+    "r_lod_quality": "3",
+    "r_antialias_quality": "3",
+    "panorama_disable_blur": "0",
+    "panorama_disable_box_shadow": "0"
+  }
+}

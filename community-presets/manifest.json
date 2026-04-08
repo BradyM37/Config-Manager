@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "presets": [
+    {
+      "id": "shroud-competitive",
+      "name": "Shroud's Competitive",
+      "author": "shroud",
+      "description": "Pro player competitive settings - maximum visibility, minimal effects",
+      "file": "shroud-competitive.json",
+      "downloads": 0,
+      "tags": ["competitive", "pro", "fps"],
+      "created": "2026-04-08"
+    },
+    {
+      "id": "ultra-potato",
+      "name": "Ultra Potato",
+      "author": "community",
+      "description": "For the absolute lowest-end PCs. Every setting minimized.",
+      "file": "ultra-potato.json",
+      "downloads": 0,
+      "tags": ["potato", "low-end", "fps"],
+      "created": "2026-04-08"
+    },
+    {
+      "id": "cinematic",
+      "name": "Cinematic Mode",
+      "author": "community",
+      "description": "Beautiful visuals for content creation and screenshots",
+      "file": "cinematic.json",
+      "downloads": 0,
+      "tags": ["quality", "cinematic", "content"],
+      "created": "2026-04-08"
+    }
+  ]
+}

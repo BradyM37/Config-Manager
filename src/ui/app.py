@@ -28,6 +28,10 @@ from src.core.notifications import (
     notify_game_launched, notify_custom_preset_saved, notify_profile_switched
 )
 from src.core.config import read_convars
+from src.core.community import (
+    list_community_presets, install_community_preset, 
+    search_community_presets, get_submit_url
+)
 from src.ui.convar_panel import ConVarPanel, CrosshairPreview
 from src import __version__
 
@@ -509,6 +513,7 @@ class Sidebar(ctk.CTkFrame):
         nav_items = [
             ("dashboard", "🏠", "Dashboard"),
             ("presets", "📦", "Presets"),
+            ("community", "🌐", "Community"),
             ("advanced", "🎛️", "Advanced"),
             ("backups", "💾", "Backups"),
             ("settings", "⚙️", "Settings"),
@@ -937,6 +942,257 @@ class BackupsTab(ctk.CTkFrame):
 
 
 # ============================================================================
+# COMMUNITY TAB
+# ============================================================================
+
+class CommunityPresetCard(ctk.CTkFrame):
+    """Card for a community preset"""
+    
+    def __init__(self, parent, preset: dict, on_install, **kwargs):
+        super().__init__(parent, fg_color=COLORS["bg_card"], corner_radius=10, **kwargs)
+        self.preset = preset
+        self.on_install = on_install
+        
+        self.configure(border_width=1, border_color=COLORS["border"])
+        self.bind("<Enter>", lambda e: self.configure(border_color=COLORS["accent_primary"]))
+        self.bind("<Leave>", lambda e: self.configure(border_color=COLORS["border"]))
+        
+        content = ctk.CTkFrame(self, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=15, pady=15)
+        
+        # Header row
+        header = ctk.CTkFrame(content, fg_color="transparent")
+        header.pack(fill="x")
+        
+        ctk.CTkLabel(header, text=preset.get("name", "Unknown"),
+                    font=ctk.CTkFont(size=15, weight="bold")).pack(side="left")
+        
+        GradientButton(header, text="Install", style="success", width=80, height=30,
+                      command=lambda: on_install(preset.get("id"))).pack(side="right")
+        
+        # Author
+        ctk.CTkLabel(content, text=f"by {preset.get('author', 'anonymous')}",
+                    font=ctk.CTkFont(size=11), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 0))
+        
+        # Description
+        ctk.CTkLabel(content, text=preset.get("description", ""),
+                    font=ctk.CTkFont(size=12), text_color=COLORS["text_secondary"],
+                    wraplength=350).pack(anchor="w", pady=(8, 0))
+        
+        # Tags
+        tags = preset.get("tags", [])
+        if tags:
+            tags_frame = ctk.CTkFrame(content, fg_color="transparent")
+            tags_frame.pack(anchor="w", pady=(10, 0))
+            
+            for tag in tags[:5]:
+                tag_label = ctk.CTkLabel(tags_frame, text=tag,
+                                        font=ctk.CTkFont(size=10),
+                                        fg_color=COLORS["bg_elevated"],
+                                        corner_radius=4, padx=8, pady=2)
+                tag_label.pack(side="left", padx=(0, 5))
+
+
+class CommunityTab(ctk.CTkFrame):
+    """Community presets browser"""
+    
+    def __init__(self, parent, app, **kwargs):
+        super().__init__(parent, fg_color="transparent", **kwargs)
+        self.app = app
+        self.presets = []
+        self._build_ui()
+    
+    def _build_ui(self):
+        # Header
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.pack(fill="x", pady=(0, 20))
+        
+        ctk.CTkLabel(header, text="Community Presets",
+                    font=ctk.CTkFont(family="Segoe UI", size=28, weight="bold")).pack(side="left")
+        
+        btn_frame = ctk.CTkFrame(header, fg_color="transparent")
+        btn_frame.pack(side="right")
+        
+        GradientButton(btn_frame, text="🔄 Refresh", style="secondary", width=100, height=40,
+                      command=self._refresh_presets).pack(side="left", padx=5)
+        GradientButton(btn_frame, text="📤 Submit Yours", style="primary", width=130, height=40,
+                      command=self._submit_preset).pack(side="left", padx=5)
+        
+        # Search
+        search_frame = ctk.CTkFrame(self, fg_color="transparent")
+        search_frame.pack(fill="x", pady=(0, 15))
+        
+        ctk.CTkLabel(search_frame, text="🔍", font=ctk.CTkFont(size=16)).pack(side="left", padx=(0, 10))
+        
+        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Search presets...",
+                                         width=300, height=40)
+        self.search_entry.pack(side="left", fill="x", expand=True)
+        self.search_entry.bind("<KeyRelease>", self._on_search)
+        
+        self.result_count = ctk.CTkLabel(search_frame, text="",
+                                         font=ctk.CTkFont(size=11), text_color=COLORS["text_muted"])
+        self.result_count.pack(side="right", padx=10)
+        
+        # Presets list
+        self.presets_frame = ctk.CTkScrollableFrame(self, fg_color="transparent")
+        self.presets_frame.pack(fill="both", expand=True)
+        
+        # Loading placeholder
+        self.loading_label = ctk.CTkLabel(self.presets_frame, 
+                                          text="Loading community presets...",
+                                          font=ctk.CTkFont(size=14), text_color=COLORS["text_muted"])
+        self.loading_label.pack(pady=50)
+    
+    def refresh(self):
+        """Called when tab becomes visible"""
+        self._refresh_presets()
+    
+    def _refresh_presets(self, force: bool = True):
+        """Fetch and display community presets"""
+        self.loading_label.configure(text="Loading...")
+        self.loading_label.pack(pady=50)
+        
+        def fetch():
+            presets = list_community_presets(force_refresh=force)
+            self.after(0, lambda: self._display_presets(presets))
+        
+        threading.Thread(target=fetch, daemon=True).start()
+    
+    def _display_presets(self, presets: list):
+        """Display presets in the UI"""
+        # Clear existing
+        for widget in self.presets_frame.winfo_children():
+            widget.destroy()
+        
+        self.presets = presets
+        
+        if not presets:
+            ctk.CTkLabel(self.presets_frame, 
+                        text="No community presets available yet.\n\nBe the first to submit one!",
+                        font=ctk.CTkFont(size=14), text_color=COLORS["text_muted"]).pack(pady=50)
+            return
+        
+        self.result_count.configure(text=f"{len(presets)} presets")
+        
+        for preset in presets:
+            card = CommunityPresetCard(self.presets_frame, preset, self._install_preset)
+            card.pack(fill="x", pady=5)
+    
+    def _on_search(self, event=None):
+        """Filter presets by search query"""
+        query = self.search_entry.get().strip()
+        
+        if not query:
+            self._display_presets(self.presets)
+            return
+        
+        filtered = search_community_presets(query)
+        self._display_presets(filtered)
+    
+    def _install_preset(self, preset_id: str):
+        """Install a community preset"""
+        if not self.app.deadlock_path:
+            self.app.sidebar.set_status("No game found", COLORS["accent_warning"])
+            return
+        
+        self.app.sidebar.set_status("Installing...", COLORS["accent_warning"])
+        
+        def install():
+            success = install_community_preset(preset_id, self.app.deadlock_path)
+            
+            if success:
+                self.after(0, lambda: self.app.sidebar.set_status(f"Installed {preset_id}", COLORS["accent_success"]))
+                self.after(0, self.app.dashboard.refresh)
+            else:
+                self.after(0, lambda: self.app.sidebar.set_status("Install failed", COLORS["accent_danger"]))
+        
+        threading.Thread(target=install, daemon=True).start()
+    
+    def _submit_preset(self):
+        """Open dialog to submit a preset"""
+        SubmitPresetDialog(self.app, self.app.deadlock_path)
+
+
+class SubmitPresetDialog(ctk.CTkToplevel):
+    """Dialog for submitting a preset to the community"""
+    
+    def __init__(self, parent, deadlock_path: Path):
+        super().__init__(parent)
+        
+        self.deadlock_path = deadlock_path
+        
+        self.title("Submit to Community")
+        self.geometry("450x350")
+        self.resizable(False, False)
+        self.configure(fg_color=COLORS["bg_dark"])
+        
+        self.transient(parent)
+        self.grab_set()
+        
+        self._build_ui()
+    
+    def _build_ui(self):
+        content = ctk.CTkFrame(self, fg_color="transparent")
+        content.pack(fill="both", expand=True, padx=30, pady=25)
+        
+        ctk.CTkLabel(content, text="📤 Submit Your Preset",
+                    font=ctk.CTkFont(size=18, weight="bold")).pack(anchor="w")
+        ctk.CTkLabel(content, text="Share your config with the community!",
+                    font=ctk.CTkFont(size=12), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(5, 20))
+        
+        # Name
+        ctk.CTkLabel(content, text="Preset Name", font=ctk.CTkFont(size=12)).pack(anchor="w")
+        self.name_entry = ctk.CTkEntry(content, width=390, height=40,
+                                       placeholder_text="My Awesome Config")
+        self.name_entry.pack(anchor="w", pady=(5, 15))
+        
+        # Author
+        ctk.CTkLabel(content, text="Your Name", font=ctk.CTkFont(size=12)).pack(anchor="w")
+        self.author_entry = ctk.CTkEntry(content, width=390, height=40,
+                                         placeholder_text="YourUsername")
+        self.author_entry.pack(anchor="w", pady=(5, 15))
+        
+        # Description
+        ctk.CTkLabel(content, text="Description", font=ctk.CTkFont(size=12)).pack(anchor="w")
+        self.desc_entry = ctk.CTkEntry(content, width=390, height=40,
+                                       placeholder_text="What makes this config special?")
+        self.desc_entry.pack(anchor="w", pady=(5, 20))
+        
+        # Info
+        ctk.CTkLabel(content, text="This will open GitHub to submit your preset for review.",
+                    font=ctk.CTkFont(size=10), text_color=COLORS["text_muted"]).pack(anchor="w")
+        
+        # Buttons
+        btn_frame = ctk.CTkFrame(content, fg_color="transparent")
+        btn_frame.pack(fill="x", pady=(15, 0))
+        
+        GradientButton(btn_frame, text="Cancel", style="secondary", width=100,
+                      command=self.destroy).pack(side="left")
+        GradientButton(btn_frame, text="Submit →", style="success", width=130,
+                      command=self._submit).pack(side="right")
+    
+    def _submit(self):
+        name = self.name_entry.get().strip()
+        author = self.author_entry.get().strip()
+        desc = self.desc_entry.get().strip()
+        
+        if not name or not author:
+            return
+        
+        # Get current convars from the game
+        if self.deadlock_path:
+            convars = read_convars(self.deadlock_path)
+        else:
+            convars = {}
+        
+        # Open GitHub issue with pre-filled content
+        url = get_submit_url(name, author, desc, convars)
+        webbrowser.open(url)
+        
+        self.destroy()
+
+
+# ============================================================================
 # SETTINGS TAB
 # ============================================================================
 
@@ -1140,6 +1396,7 @@ class App(ctk.CTk):
         
         self.dashboard = DashboardTab(self.content, self)
         self.presets_tab = PresetsTab(self.content, self)
+        self.community_tab = CommunityTab(self.content, self)
         self.advanced_tab = AdvancedTab(self.content, self)
         self.backups_tab = BackupsTab(self.content, self)
         self.settings_tab = SettingsTab(self.content, self)
@@ -1147,6 +1404,7 @@ class App(ctk.CTk):
         self.tabs = {
             "dashboard": self.dashboard,
             "presets": self.presets_tab,
+            "community": self.community_tab,
             "advanced": self.advanced_tab,
             "backups": self.backups_tab,
             "settings": self.settings_tab,

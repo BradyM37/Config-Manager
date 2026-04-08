@@ -1,0 +1,33 @@
+{
+  "name": "Ultra Potato",
+  "author": "community",
+  "description": "For the absolute lowest-end PCs. Every setting minimized.",
+  "convars": {
+    "fps_max": "0",
+    "r_shadows": "0",
+    "r_citadel_shadow_quality": "0",
+    "lb_enable_stationary_lights": "0",
+    "lb_enable_dynamic_lights": "0",
+    "r_ssao": "0",
+    "r_ssr": "0",
+    "r_effects_bloom": "0",
+    "r_depth_of_field": "0",
+    "r_motion_blur_enabled": "0",
+    "r_volumetric_fog": "0",
+    "r_particle_max_detail_level": "0",
+    "r_drawparticles": "1",
+    "sc_clutter_enable": "0",
+    "r_grass": "0",
+    "r_foliage": "0",
+    "r_grass_quality": "0",
+    "r_texture_stream_mip_bias": "4",
+    "r_texturefilteringquality": "0",
+    "r_farz": "8000",
+    "r_size_cull_threshold": "2",
+    "r_lod_switch_scale": "0.25",
+    "panorama_disable_blur": "1",
+    "panorama_disable_box_shadow": "1",
+    "r_antialias_quality": "0",
+    "r_fxaa": "0"
+  }
+}
