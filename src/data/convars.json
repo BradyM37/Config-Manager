@@ -1,0 +1,200 @@
+{
+  "categories": [
+    {
+      "name": "Shadows",
+      "icon": "🌑",
+      "convars": [
+        {
+          "name": "r_shadows",
+          "display": "Dynamic Shadows",
+          "type": "toggle",
+          "default": "1",
+          "description": "Enable/disable dynamic shadows"
+        },
+        {
+          "name": "r_citadel_shadow_quality",
+          "display": "Shadow Quality",
+          "type": "slider",
+          "min": 0,
+          "max": 3,
+          "default": "2",
+          "labels": ["Off", "Low", "Medium", "High"],
+          "description": "Shadow quality level"
+        }
+      ]
+    },
+    {
+      "name": "Lighting",
+      "icon": "💡",
+      "convars": [
+        {
+          "name": "r_ssao",
+          "display": "Ambient Occlusion",
+          "type": "toggle",
+          "default": "1",
+          "description": "Screen-space ambient occlusion"
+        },
+        {
+          "name": "lb_enable_dynamic_lights",
+          "display": "Dynamic Lights",
+          "type": "toggle",
+          "default": "1",
+          "description": "Dynamic light sources (abilities, etc.)"
+        },
+        {
+          "name": "lb_enable_stationary_lights",
+          "display": "Stationary Lights",
+          "type": "toggle",
+          "default": "1",
+          "description": "Static map lighting"
+        }
+      ]
+    },
+    {
+      "name": "Effects",
+      "icon": "✨",
+      "convars": [
+        {
+          "name": "r_drawparticles",
+          "display": "Particles",
+          "type": "toggle",
+          "default": "1",
+          "description": "Particle effects (keep ON for abilities)"
+        },
+        {
+          "name": "r_effects_bloom",
+          "display": "Bloom",
+          "type": "toggle",
+          "default": "1",
+          "description": "Bloom/glow effects"
+        },
+        {
+          "name": "r_depth_of_field",
+          "display": "Depth of Field",
+          "type": "toggle",
+          "default": "1",
+          "description": "Depth of field blur"
+        },
+        {
+          "name": "r_particle_max_detail_level",
+          "display": "Particle Detail",
+          "type": "slider",
+          "min": 0,
+          "max": 3,
+          "default": "3",
+          "labels": ["Lowest", "Low", "Medium", "High"],
+          "description": "Particle effect detail level"
+        }
+      ]
+    },
+    {
+      "name": "Textures",
+      "icon": "🖼️",
+      "convars": [
+        {
+          "name": "r_texture_stream_mip_bias",
+          "display": "Texture Quality",
+          "type": "slider",
+          "min": 0,
+          "max": 4,
+          "default": "0",
+          "labels": ["Ultra", "High", "Medium", "Low", "Potato"],
+          "description": "Texture detail (higher = blurrier)"
+        },
+        {
+          "name": "r_texturefilteringquality",
+          "display": "Texture Filtering",
+          "type": "slider",
+          "min": 0,
+          "max": 5,
+          "default": "3",
+          "labels": ["Bilinear", "Trilinear", "Aniso 2x", "Aniso 4x", "Aniso 8x", "Aniso 16x"],
+          "description": "Texture filtering quality"
+        }
+      ]
+    },
+    {
+      "name": "Rendering",
+      "icon": "🎮",
+      "convars": [
+        {
+          "name": "r_farz",
+          "display": "Render Distance",
+          "type": "slider",
+          "min": 3000,
+          "max": 16000,
+          "step": 1000,
+          "default": "16000",
+          "description": "Far clipping plane distance"
+        },
+        {
+          "name": "r_size_cull_threshold",
+          "display": "Object Culling",
+          "type": "slider",
+          "min": 0.5,
+          "max": 2.0,
+          "step": 0.1,
+          "default": "0.8",
+          "description": "Cull small objects (higher = more culling)"
+        },
+        {
+          "name": "fps_max",
+          "display": "FPS Limit",
+          "type": "slider",
+          "min": 0,
+          "max": 400,
+          "step": 10,
+          "default": "0",
+          "description": "Maximum FPS (0 = unlimited)"
+        }
+      ]
+    },
+    {
+      "name": "Visual Clarity",
+      "icon": "👁️",
+      "convars": [
+        {
+          "name": "r_citadel_npr_outlines",
+          "display": "Enemy Outlines",
+          "type": "toggle",
+          "default": "true",
+          "description": "Outlines on enemy players"
+        },
+        {
+          "name": "citadel_trooper_glow_disabled",
+          "display": "Disable Trooper Glow",
+          "type": "toggle",
+          "default": "0",
+          "description": "Disable minion glow effects"
+        },
+        {
+          "name": "sc_clutter_enable",
+          "display": "Clutter Props",
+          "type": "toggle",
+          "default": "true",
+          "description": "Small debris and clutter"
+        }
+      ]
+    },
+    {
+      "name": "UI",
+      "icon": "🖥️",
+      "convars": [
+        {
+          "name": "panorama_disable_blur",
+          "display": "UI Blur",
+          "type": "toggle_inverse",
+          "default": "0",
+          "description": "Blur effects in menus"
+        },
+        {
+          "name": "panorama_disable_box_shadow",
+          "display": "UI Shadows",
+          "type": "toggle_inverse",
+          "default": "0",
+          "description": "Box shadows in UI"
+        }
+      ]
+    }
+  ]
+}
