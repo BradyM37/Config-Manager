@@ -13,7 +13,7 @@ import sys
 from src.core.detector import find_deadlock, get_current_config_info, validate_deadlock_path, get_gameinfo_path
 from src.core.backup import create_backup, list_backups, restore_backup, ensure_vanilla_backup
 from src.core.config import list_presets, apply_preset, get_presets_dir
-from src.core.updater import check_for_updates
+from src.core.updater import check_for_updates, download_update, apply_update
 from src.core.settings import (
     load_settings, save_settings, get_setting, set_setting,
     ACCENT_COLORS, list_profiles, save_profile, load_profile,
@@ -991,9 +991,33 @@ class App(ctk.CTk):
     
     def _on_update_check(self, update):
         if update:
-            self.sidebar.set_status(f"Update: v{update['version']}", COLORS["accent_success"])
-            if update.get("html_url"):
-                webbrowser.open(update["html_url"])
+            self.sidebar.set_status(f"Downloading v{update['version']}...", COLORS["accent_warning"])
+            
+            # Download and apply update automatically
+            def do_update():
+                download_url = update.get("download_url")
+                if not download_url:
+                    self.after(0, lambda: self.sidebar.set_status("No download available", COLORS["accent_danger"]))
+                    return
+                
+                # Download the update
+                update_path = download_update(download_url)
+                
+                if update_path:
+                    self.after(0, lambda: self.sidebar.set_status("Installing...", COLORS["accent_warning"]))
+                    
+                    # Apply update (will restart app)
+                    if apply_update(update_path):
+                        self.after(0, self._quit)
+                    else:
+                        # Fall back to opening browser if auto-update fails
+                        self.after(0, lambda: self.sidebar.set_status("Manual update required", COLORS["accent_warning"]))
+                        if update.get("html_url"):
+                            webbrowser.open(update["html_url"])
+                else:
+                    self.after(0, lambda: self.sidebar.set_status("Download failed", COLORS["accent_danger"]))
+            
+            threading.Thread(target=do_update, daemon=True).start()
         else:
             self.sidebar.set_status("Up to date", COLORS["accent_success"])
 
