@@ -1,32 +1,59 @@
 {
   "name": "competitive",
   "display": "🎯 Competitive",
-  "description": "Maximum visibility and FPS for ranked play. Minimal distractions.",
+  "description": "Maximum visibility and responsiveness for ranked play. Clean, distraction-free.",
   "convars": {
     "fps_max": "0",
     "fps_max_ui": "120",
+    
     "r_shadows": "0",
     "r_citadel_shadow_quality": "0",
+    "csm_max_shadow_dist_override": "0",
+    "sc_disable_spotlight_shadows": "1",
+    "cl_globallight_shadow_mode": "0",
+    
     "r_ssao": "0",
-    "r_ssr": "0",
+    "r_ssao_strength": "0",
+    
     "r_effects_bloom": "0",
     "r_depth_of_field": "0",
-    "r_motion_blur_enabled": "0",
-    "r_volumetric_fog": "0",
-    "r_particle_max_detail_level": "1",
-    "sc_clutter_enable": "0",
+    
+    "lb_enable_stationary_lights": "1",
+    "lb_enable_dynamic_lights": "0",
+    "lb_enable_baked_shadows": "1",
+    
+    "r_citadel_fog_quality": "0",
+    
     "r_grass": "0",
     "r_grass_quality": "0",
+    "sc_clutter_enable": "0",
+    
+    "r_particle_max_detail_level": "1",
+    
     "r_texture_stream_mip_bias": "0",
-    "r_texturefilteringquality": "2",
-    "r_lod_switch_scale": "1.0",
-    "r_lod_quality": "2",
-    "r_antialias_quality": "1",
-    "r_fxaa": "0",
+    "r_texture_lod_scale": "1",
+    
+    "r_citadel_distancefield_ao_quality": "0",
+    "r_citadel_distancefield_shadows": "0",
+    
+    "r_farz": "20000",
+    
     "panorama_disable_blur": "1",
     "panorama_disable_box_shadow": "1",
+    "r_citadel_enable_pano_world_blur": "0",
+    "r_dashboard_render_quality": "0",
+    
     "r_citadel_npr_outlines": "1",
-    "r_citadel_outlines": "1",
+    "r_citadel_npr_outlines_max_dist": "800",
+    "r_citadel_selection_outline2_alpha": "0.3",
+    "r_citadel_selection_outline2_width": "2",
+    
+    "citadel_boss_glow_disabled": "0",
+    "citadel_player_glow_disabled": "0",
+    
+    "engine_no_focus_sleep": "0",
+    "engine_low_latency_sleep_after_client_tick": "true",
+    
     "cl_interp_ratio": "1"
   }
 }

@@ -1,31 +1,56 @@
 {
   "name": "potato",
   "display": "🥔 Potato",
-  "description": "Maximum FPS for low-end PCs. Disables shadows and effects.",
+  "description": "Absolute minimum for low-end PCs. Maximum FPS, minimal visuals.",
   "convars": {
     "fps_max": "0",
     "fps_max_ui": "120",
+    
     "r_shadows": "0",
     "r_citadel_shadow_quality": "0",
+    "csm_max_shadow_dist_override": "0",
+    "lb_csm_cascade_size_override": "1",
+    "sc_disable_spotlight_shadows": "1",
+    "cl_globallight_shadow_mode": "0",
+    "lb_barnlight_shadowmap_scale": "0.5",
+    
     "r_ssao": "0",
-    "r_ssr": "0",
+    "r_ssao_strength": "0",
+    
     "r_effects_bloom": "0",
     "r_depth_of_field": "0",
-    "r_motion_blur_enabled": "0",
-    "r_volumetric_fog": "0",
-    "r_particle_max_detail_level": "1",
-    "sc_clutter_enable": "0",
+    
+    "lb_enable_stationary_lights": "1",
+    "lb_enable_dynamic_lights": "0",
+    "lb_enable_baked_shadows": "1",
+    
+    "r_citadel_fog_quality": "0",
+    
     "r_grass": "0",
     "r_grass_quality": "0",
+    "sc_clutter_enable": "0",
+    
+    "r_particle_max_detail_level": "0",
+    
     "r_texture_stream_mip_bias": "2",
-    "r_texturefilteringquality": "1",
-    "r_lod_switch_scale": "0.5",
-    "r_lod_quality": "1",
-    "r_antialias_quality": "0",
-    "r_fxaa": "0",
+    "r_texture_lod_scale": "0.75",
+    
+    "r_citadel_distancefield_ao_quality": "0",
+    "r_citadel_distancefield_shadows": "0",
+    
+    "r_farz": "10000",
+    
     "panorama_disable_blur": "1",
     "panorama_disable_box_shadow": "1",
+    "r_citadel_enable_pano_world_blur": "0",
+    "r_dashboard_render_quality": "0",
+    
     "r_citadel_npr_outlines": "1",
-    "r_citadel_outlines": "1"
+    "r_citadel_npr_outlines_max_dist": "500",
+    
+    "engine_no_focus_sleep": "50",
+    "engine_low_latency_sleep_after_client_tick": "true",
+    
+    "cl_interp_ratio": "1"
   }
 }
