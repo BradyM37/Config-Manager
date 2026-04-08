@@ -1,4 +1,4 @@
-# ⚙️ OptiLock Config Manager
+# ⚙️ Deadlock Config Manager
 
 A clean, modern GUI application for managing Deadlock performance configs.
 
@@ -17,7 +17,7 @@ A clean, modern GUI application for managing Deadlock performance configs.
 ## 📥 Installation
 
 ### Option 1: Download Release (Recommended)
-1. Download `OptiLockManager.exe`
+1. Download `DeadlockConfighManager.exe`
 2. Run the exe - no installation required!
 
 
