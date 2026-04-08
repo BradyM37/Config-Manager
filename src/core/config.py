@@ -52,7 +52,10 @@ def list_presets() -> list[dict]:
             }
             
             # Include the appropriate data based on type
-            if preset_type == "video":
+            if preset_type == "both":
+                preset_info["video"] = data.get("video", {})
+                preset_info["convars"] = data.get("convars", {})
+            elif preset_type == "video":
                 preset_info["settings"] = data.get("settings", {})
             else:
                 preset_info["convars"] = data.get("convars", {})
@@ -119,7 +122,9 @@ def apply_preset(deadlock_path: Path, preset_path_or_name, backup: bool = True) 
                     with open(preset_path, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                     preset_type = data.get("type", "json")
-                    if preset_type == "video":
+                    if preset_type == "both":
+                        preset = {"type": "both", "video": data.get("video", {}), "convars": data.get("convars", {}), "path": preset_path}
+                    elif preset_type == "video":
                         preset = {"type": "video", "settings": data.get("settings", {}), "path": preset_path}
                     else:
                         preset = {"type": "json", "convars": data.get("convars", {}), "path": preset_path}
