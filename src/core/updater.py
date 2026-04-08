@@ -4,6 +4,7 @@ Checks GitHub for updates and downloads new versions
 """
 
 import json
+import os
 import tempfile
 import shutil
 import subprocess
@@ -145,28 +146,61 @@ def apply_update(update_path: Path) -> bool:
             print("Auto-update only works with compiled .exe")
             return False
         
-        # Create a batch script to:
-        # 1. Wait for current process to exit
-        # 2. Replace the exe
-        # 3. Start the new exe
-        # 4. Delete itself
+        # Create a PowerShell script that:
+        # 1. Waits for the current process to fully exit (by PID)
+        # 2. Waits extra time for file handles to release
+        # 3. Replaces the exe
+        # 4. Starts the new exe
+        # 5. Cleans up
         
-        batch_path = update_path.parent / "update.bat"
+        current_pid = os.getpid()
+        ps_path = update_path.parent / "update.ps1"
         
-        batch_content = f'''@echo off
-timeout /t 2 /nobreak > nul
-copy /y "{update_path}" "{current_exe}"
-start "" "{current_exe}"
-del "%~f0"
+        ps_content = f'''
+$ErrorActionPreference = "SilentlyContinue"
+
+# Wait for the main process to exit
+$process = Get-Process -Id {current_pid} -ErrorAction SilentlyContinue
+if ($process) {{
+    $process.WaitForExit()
+}}
+
+# Extra wait for file handles to release
+Start-Sleep -Seconds 3
+
+# Try to copy with retries
+$maxRetries = 10
+$retryCount = 0
+$success = $false
+
+while (-not $success -and $retryCount -lt $maxRetries) {{
+    try {{
+        Copy-Item -Path "{update_path}" -Destination "{current_exe}" -Force
+        $success = $true
+    }} catch {{
+        $retryCount++
+        Start-Sleep -Seconds 1
+    }}
+}}
+
+if ($success) {{
+    # Start the new exe
+    Start-Process -FilePath "{current_exe}"
+}}
+
+# Clean up
+Remove-Item -Path "{update_path}" -Force -ErrorAction SilentlyContinue
+Remove-Item -Path $MyInvocation.MyCommand.Path -Force -ErrorAction SilentlyContinue
 '''
         
-        with open(batch_path, 'w') as f:
-            f.write(batch_content)
+        with open(ps_path, 'w', encoding='utf-8') as f:
+            f.write(ps_content)
         
-        # Start the batch script and exit
+        # Start PowerShell script hidden and detached
         subprocess.Popen(
-            ['cmd', '/c', str(batch_path)],
-            creationflags=subprocess.CREATE_NO_WINDOW
+            ['powershell', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden', '-File', str(ps_path)],
+            creationflags=subprocess.CREATE_NO_WINDOW | subprocess.DETACHED_PROCESS,
+            start_new_session=True
         )
         
         return True
