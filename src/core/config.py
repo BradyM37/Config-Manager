@@ -162,7 +162,7 @@ def modify_convar(deadlock_path: Path, convar_name: str, value: str, backup: boo
             content = f.read()
         
         # Pattern to match the convar line
-        pattern = rf'(^\s*{re.escape(convar_name)}\s+)["\']?[^"\'}\n]+["\']?'
+        pattern = rf'(^\s*{re.escape(convar_name)}\s+)["\']?[^"\'}}\n]+["\']?'
         
         if re.search(pattern, content, re.MULTILINE | re.IGNORECASE):
             # Convar exists, replace it
