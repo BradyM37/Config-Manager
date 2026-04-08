@@ -42,6 +42,7 @@
     "r_lod_quality": "2",
     "r_farz": "16000",
     "r_lod_switch_scale": "1.5",
+    "r_size_cull_threshold": "0.4",
     "panorama_disable_blur": "0",
     "panorama_disable_box_shadow": "0"
   }

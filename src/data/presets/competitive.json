@@ -43,6 +43,7 @@
     "r_lod_quality": "1",
     "r_farz": "16000",
     "r_lod_switch_scale": "0.75",
+    "r_size_cull_threshold": "0.5",
     "citadel_trooper_glow_disabled": "1",
     "panorama_disable_blur": "1",
     "panorama_disable_box_shadow": "0"
