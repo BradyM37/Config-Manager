@@ -183,7 +183,7 @@ class CreatePresetDialog(ctk.CTkToplevel):
         self.result = None
         
         self.title("Create Custom Preset")
-        self.geometry("400x250")
+        self.geometry("400x320")
         self.resizable(False, False)
         self.configure(fg_color=COLORS["bg_dark"])
         
@@ -309,7 +309,7 @@ class GameRunningWarningDialog(ctk.CTkToplevel):
         self.result = False
         
         self.title("Game Running")
-        self.geometry("400x200")
+        self.geometry("400x240")
         self.resizable(False, False)
         self.configure(fg_color=COLORS["bg_dark"])
         
@@ -1294,7 +1294,7 @@ class SubmitPresetDialog(ctk.CTkToplevel):
         self.on_submit = on_submit
         
         self.title("Submit to Community")
-        self.geometry("450x600")
+        self.geometry("450x650")
         self.resizable(False, False)
         self.configure(fg_color=COLORS["bg_dark"])
         
