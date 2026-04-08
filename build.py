@@ -28,7 +28,18 @@ def build():
         "--add-data=src/data;src/data",
         "--hidden-import=customtkinter",
         "--hidden-import=packaging",
+        "--hidden-import=src",
+        "--hidden-import=src.core",
+        "--hidden-import=src.core.config",
+        "--hidden-import=src.core.backup",
+        "--hidden-import=src.core.detector",
+        "--hidden-import=src.core.updater",
+        "--hidden-import=src.ui",
+        "--hidden-import=src.ui.app",
+        "--hidden-import=src.ui.convar_panel",
+        "--hidden-import=src.ui.preset_cards",
         "--collect-all=customtkinter",
+        "--collect-submodules=src",
         "src/main.py"
     ]
     
