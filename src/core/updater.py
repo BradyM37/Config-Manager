@@ -16,9 +16,9 @@ import requests
 
 from src import __version__
 
-# GitHub repository info - UPDATE THIS when repo is created
-GITHUB_OWNER = "optilock"
-GITHUB_REPO = "config-manager"
+# GitHub repository info
+GITHUB_OWNER = "BradyM37"
+GITHUB_REPO = "Config-Manager"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
 
 # Current version
