@@ -186,8 +186,9 @@ def apply_convars_to_gameinfo(gameinfo_path: Path, convars: dict) -> bool:
     """
     Apply convars to an existing gameinfo.gi file using a marker-based approach.
     
-    This inserts a clearly marked block right after 'ConVars {' that can be
-    cleanly removed and replaced on subsequent applies.
+    This inserts a clearly marked block at the END of the ConVars section
+    (before the closing brace) so our values take precedence over any
+    existing convars above.
     """
     if not gameinfo_path.exists():
         return False
@@ -207,16 +208,35 @@ def apply_convars_to_gameinfo(gameinfo_path: Path, convars: dict) -> bool:
             print("ConVars section not found in gameinfo.gi")
             return False
         
+        # Find the matching closing brace for the ConVars section
+        # Count braces to find the correct closing one
+        start_pos = convars_open.end()
+        brace_count = 1
+        pos = start_pos
+        
+        while pos < len(content) and brace_count > 0:
+            if content[pos] == '{':
+                brace_count += 1
+            elif content[pos] == '}':
+                brace_count -= 1
+            pos += 1
+        
+        if brace_count != 0:
+            print("Could not find closing brace for ConVars section")
+            return False
+        
+        # pos is now right after the closing brace, we want to insert before it
+        closing_brace_pos = pos - 1
+        
         # Build our convar block
         convar_lines = [DCM_MARKER_START]
         for name, value in convars.items():
             convar_lines.append(f'\t\t"{name}"\t\t"{value}"')
         convar_lines.append(DCM_MARKER_END)
-        dcm_block = '\n'.join(convar_lines) + '\n'
+        dcm_block = '\n'.join(convar_lines) + '\n\t'
         
-        # Insert right after 'ConVars {'
-        insert_pos = convars_open.end()
-        new_content = content[:insert_pos] + '\n' + dcm_block + content[insert_pos:]
+        # Insert right BEFORE the closing brace (at end of ConVars section)
+        new_content = content[:closing_brace_pos] + dcm_block + content[closing_brace_pos:]
         
         with open(gameinfo_path, 'w', encoding='utf-8') as f:
             f.write(new_content)
