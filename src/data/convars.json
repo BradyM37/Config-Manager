@@ -13,7 +13,7 @@
           "step": 10,
           "default": "0",
           "source": "video",
-          "description": "Maximum FPS (0 = unlimited)"
+          "description": "Caps your maximum framerate. Set to 0 for unlimited FPS, or match your monitor's refresh rate to reduce screen tearing."
         },
         {
           "name": "mat_vsync",
@@ -21,7 +21,7 @@
           "type": "toggle",
           "default": "0",
           "source": "convar",
-          "description": "Vertical sync (off = lower input lag)"
+          "description": "Syncs frames to your monitor's refresh rate. Eliminates screen tearing but adds input lag. Turn OFF for competitive play."
         },
         {
           "name": "gpu_level",
@@ -32,7 +32,7 @@
           "default": "2",
           "labels": ["Low", "Medium", "High", "Ultra"],
           "source": "convar",
-          "description": "GPU quality preset"
+          "description": "Master GPU quality preset. Lower values reduce visual quality but significantly boost FPS on weaker graphics cards."
         },
         {
           "name": "cpu_level",
@@ -43,7 +43,7 @@
           "default": "2",
           "labels": ["Low", "Medium", "High", "Ultra"],
           "source": "convar",
-          "description": "CPU quality preset"
+          "description": "Master CPU quality preset. Lower values reduce physics and AI complexity. Helps if your CPU is bottlenecking performance."
         },
         {
           "name": "r_farz",
@@ -54,7 +54,7 @@
           "step": 1000,
           "default": "16000",
           "source": "convar",
-          "description": "Far clipping plane distance"
+          "description": "How far the game renders objects. Lower values improve FPS but distant objects may pop in suddenly. Don't go too low or you'll miss enemies."
         },
         {
           "name": "r_size_cull_threshold",
@@ -65,7 +65,7 @@
           "step": 0.1,
           "default": "0.8",
           "source": "convar",
-          "description": "Cull small objects (higher = more FPS)"
+          "description": "Hides small objects that take up little screen space. Higher values = more FPS but small details disappear. Good for potato PCs."
         },
         {
           "name": "r_lod_switch_scale",
@@ -76,7 +76,7 @@
           "step": 0.25,
           "default": "1",
           "source": "convar",
-          "description": "Lower = earlier LOD switch (more FPS)"
+          "description": "When models switch to lower-detail versions. Lower = switches sooner (more FPS), Higher = keeps detail longer (better visuals)."
         }
       ]
     },
@@ -90,7 +90,7 @@
           "type": "toggle",
           "default": "1",
           "source": "video",
-          "description": "Enable/disable dynamic shadows"
+          "description": "Master shadow toggle. Shadows from players, abilities, and moving objects. Turning off gives big FPS gains but removes visual depth."
         },
         {
           "name": "r_citadel_shadow_quality",
@@ -101,7 +101,7 @@
           "default": "2",
           "labels": ["Off", "Low", "Medium", "High"],
           "source": "video",
-          "description": "Shadow quality level"
+          "description": "Shadow detail level. Higher = sharper, more realistic shadows. Lower = blurry shadows but better FPS. Off removes them completely."
         },
         {
           "name": "r_shadow_resolution",
@@ -112,7 +112,7 @@
           "step": 256,
           "default": "1024",
           "source": "convar",
-          "description": "Shadow map resolution"
+          "description": "Shadow map pixel resolution. Higher = crisper shadows but uses more VRAM. 1024 is a good balance, 512 for potato mode."
         },
         {
           "name": "csm_quality_level",
@@ -124,7 +124,7 @@
           "labels": ["Off", "Low", "Medium", "High"],
           "source": "video",
           "video_name": "csm_max_num_cascades_override",
-          "description": "Cascaded shadow map quality"
+          "description": "Sun/directional shadow quality. These are the big environmental shadows. Very performance-heavy, turn down for FPS boost."
         }
       ]
     },
@@ -138,7 +138,7 @@
           "type": "toggle",
           "default": "1",
           "source": "video",
-          "description": "Screen-space ambient occlusion"
+          "description": "Adds soft shadows in corners and crevices for depth. Makes scenes look more realistic but costs some FPS. Safe to disable."
         },
         {
           "name": "lb_enable_dynamic_lights",
@@ -146,7 +146,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Dynamic light sources"
+          "description": "Lights from abilities, explosions, and projectiles. Looks cool but can tank FPS during big fights. Consider disabling for competitive."
         },
         {
           "name": "lb_enable_stationary_lights",
@@ -154,7 +154,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Static map lighting"
+          "description": "Static lights baked into the map (streetlights, signs, etc). Disabling makes the map look flat but saves some performance."
         },
         {
           "name": "r_ssr",
@@ -162,7 +162,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Real-time reflections"
+          "description": "Real-time reflections on shiny surfaces like water and metal. Very GPU-heavy. Turn off for big FPS gains with minimal visual loss."
         },
         {
           "name": "lb_enable_global_illumination",
@@ -170,7 +170,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Indirect lighting (expensive)"
+          "description": "Simulates light bouncing off surfaces. Makes lighting look natural but is expensive. One of the first things to disable for FPS."
         },
         {
           "name": "r_indirect_diffuse",
@@ -178,7 +178,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Indirect diffuse lighting"
+          "description": "Soft indirect lighting that fills in shadows. Part of GI system. Disable along with Global Illumination for max performance."
         }
       ]
     },
@@ -192,7 +192,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Particle effects (keep ON)"
+          "description": "All particle effects (abilities, explosions, smoke). WARNING: Turning off may hide important ability visuals. Keep ON unless desperate."
         },
         {
           "name": "r_effects_bloom",
@@ -201,7 +201,7 @@
           "default": "1",
           "source": "video",
           "video_bool": true,
-          "description": "Bloom/glow effects"
+          "description": "Glowing effect around bright lights and abilities. Purely cosmetic, safe to disable. Some players find it distracting."
         },
         {
           "name": "r_depth_of_field",
@@ -210,7 +210,7 @@
           "default": "0",
           "source": "video",
           "video_bool": true,
-          "description": "Depth of field blur"
+          "description": "Blurs background when focusing on close objects. Looks cinematic but can obscure enemies. Most competitive players disable this."
         },
         {
           "name": "r_particle_max_detail_level",
@@ -221,7 +221,7 @@
           "default": "3",
           "labels": ["Lowest", "Low", "Medium", "High"],
           "source": "video",
-          "description": "Particle effect detail level"
+          "description": "How detailed particle effects are. Lower = simpler effects with fewer particles. Reduces visual clutter and improves FPS."
         },
         {
           "name": "r_citadel_motion_blur",
@@ -229,7 +229,7 @@
           "type": "toggle",
           "default": "0",
           "source": "video",
-          "description": "Camera motion blur"
+          "description": "Blurs screen when moving or turning fast. Most players hate this - it looks 'cinematic' but makes aiming harder. Leave OFF."
         },
         {
           "name": "r_citadel_fog_quality",
@@ -240,7 +240,7 @@
           "default": "1",
           "labels": ["Off", "Low", "High"],
           "source": "video",
-          "description": "3D fog effects"
+          "description": "3D fog and atmospheric effects. Looks pretty but can obscure vision and costs FPS. Turn off for cleaner visibility."
         },
         {
           "name": "r_decals",
@@ -248,7 +248,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Bullet holes, blood splatter, etc."
+          "description": "Bullet holes, scorch marks, blood splatter on surfaces. Purely visual, safe to disable. Helps keep the battlefield clean."
         }
       ]
     },
@@ -265,7 +265,7 @@
           "default": "0",
           "labels": ["Ultra", "High", "Medium", "Low", "Potato"],
           "source": "video",
-          "description": "Texture detail (higher = blurrier)"
+          "description": "Texture resolution/sharpness. Higher values = blurrier textures but less VRAM usage. Only lower if you're running out of VRAM."
         },
         {
           "name": "r_texturefilteringquality",
@@ -276,7 +276,7 @@
           "default": "3",
           "labels": ["Bilinear", "Trilinear", "Aniso 2x", "Aniso 4x", "Aniso 8x", "Aniso 16x"],
           "source": "convar",
-          "description": "Texture filtering quality"
+          "description": "How sharp textures look at angles. Anisotropic filtering (Aniso) keeps textures crisp. Modern GPUs handle 16x easily."
         }
       ]
     },
@@ -293,7 +293,7 @@
           "default": "2",
           "labels": ["Off", "Low", "Medium", "High"],
           "source": "video",
-          "description": "Anti-aliasing quality"
+          "description": "Smooths jagged edges on objects. Higher = smoother but costs FPS. Low or Medium is usually enough. Off looks jagged but fastest."
         },
         {
           "name": "r_fxaa",
@@ -301,7 +301,7 @@
           "type": "toggle",
           "default": "0",
           "source": "convar",
-          "description": "Fast approximate anti-aliasing"
+          "description": "Fast anti-aliasing that slightly blurs the image. Very cheap performance-wise but can make text/UI look fuzzy. Try it if main AA is too slow."
         }
       ]
     },
@@ -315,7 +315,7 @@
           "type": "toggle",
           "default": "1",
           "source": "video",
-          "description": "Outlines on enemy players"
+          "description": "Colored outlines around enemy players. KEEP THIS ON - it's how you spot enemies. Only disable for screenshots/cinematic mode."
         },
         {
           "name": "citadel_trooper_glow_disabled",
@@ -323,7 +323,7 @@
           "type": "toggle",
           "default": "0",
           "source": "convar",
-          "description": "Disable minion glow effects"
+          "description": "Removes the glow effect on lane minions (troopers). Can reduce visual clutter and help you focus on enemy players."
         },
         {
           "name": "sc_clutter_enable",
@@ -331,7 +331,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Small debris and clutter"
+          "description": "Small environmental debris like trash, papers, small rocks. Purely decorative. Disable for cleaner visuals and tiny FPS gain."
         },
         {
           "name": "r_lod_quality",
@@ -342,7 +342,7 @@
           "default": "2",
           "labels": ["Low", "Medium", "High", "Ultra"],
           "source": "convar",
-          "description": "Model level of detail"
+          "description": "Character and object model complexity. Lower = blockier models but better FPS. Affects how detailed heroes and props look."
         },
         {
           "name": "r_grass",
@@ -350,7 +350,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Grass rendering"
+          "description": "Grass and ground vegetation. Can obscure dropped items and add visual noise. Many competitive players turn this off."
         },
         {
           "name": "r_foliage",
@@ -358,7 +358,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Foliage rendering"
+          "description": "Bushes, leaves, and plant details. Like grass, can create visual clutter. Disabling gives cleaner sightlines."
         },
         {
           "name": "r_fullbright",
@@ -366,7 +366,7 @@
           "type": "toggle",
           "default": "0",
           "source": "convar",
-          "description": "Disable lighting (if server allows)"
+          "description": "Removes all shadows and lighting, making everything evenly lit. Usually blocked by servers. Looks ugly but maximizes visibility."
         }
       ]
     },
@@ -383,7 +383,7 @@
           "step": 1,
           "default": "90",
           "source": "convar",
-          "description": "Camera field of view (higher = wider)"
+          "description": "How wide your camera view is. Higher = see more but things look smaller/farther. 100-110 is popular for competitive. Too high can cause motion sickness."
         },
         {
           "name": "citadel_crosshair_pip_gap",
@@ -393,7 +393,7 @@
           "max": 10,
           "default": "3",
           "source": "convar",
-          "description": "Gap between crosshair pips"
+          "description": "Space between crosshair lines and the center. Larger gap = easier to see what you're aiming at. Personal preference."
         },
         {
           "name": "citadel_crosshair_pip_height",
@@ -403,7 +403,7 @@
           "max": 32,
           "default": "16",
           "source": "convar",
-          "description": "Height of crosshair pips"
+          "description": "Length of the crosshair lines. Longer = easier to see but takes up more screen. Shorter = cleaner but harder to track."
         },
         {
           "name": "citadel_crosshair_pip_width",
@@ -413,7 +413,7 @@
           "max": 10,
           "default": "4",
           "source": "convar",
-          "description": "Width of crosshair pips"
+          "description": "Thickness of crosshair lines. Thicker = more visible but blocks more of your view. Find what works for your monitor resolution."
         },
         {
           "name": "citadel_crosshair_pip_opacity",
@@ -424,7 +424,7 @@
           "step": 0.1,
           "default": "0.4",
           "source": "convar",
-          "description": "Crosshair transparency"
+          "description": "How transparent the crosshair lines are. Lower = more see-through. Some prefer faint crosshairs to not obstruct vision."
         },
         {
           "name": "citadel_crosshair_dot_opacity",
@@ -435,7 +435,7 @@
           "step": 0.1,
           "default": "0.7",
           "source": "convar",
-          "description": "Center dot transparency"
+          "description": "Visibility of the center dot. Set to 0 to remove it entirely. Many players prefer just the lines without a center dot."
         }
       ]
     },
@@ -449,7 +449,7 @@
           "type": "toggle_inverse",
           "default": "0",
           "source": "convar",
-          "description": "Blur effects in menus"
+          "description": "Blur effect behind menus and UI panels. Disabling removes the frosted glass look but saves some GPU cycles in menus."
         },
         {
           "name": "panorama_disable_box_shadow",
@@ -457,7 +457,7 @@
           "type": "toggle_inverse",
           "default": "0",
           "source": "convar",
-          "description": "Box shadows in UI"
+          "description": "Drop shadows on UI elements. Purely cosmetic. Disabling makes UI look flatter but slightly improves menu performance."
         },
         {
           "name": "citadel_healthbars_enabled",
@@ -465,7 +465,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Show health bars"
+          "description": "Shows health bars above players and objectives. Essential for gameplay - only disable for screenshots or cinematic recording."
         },
         {
           "name": "citadel_hud_visible",
@@ -473,7 +473,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Show the HUD"
+          "description": "Shows all HUD elements (health, abilities, minimap). Only turn off for screenshots. You need this to play properly."
         },
         {
           "name": "citadel_damage_text_lifetime",
@@ -484,7 +484,7 @@
           "step": 0.25,
           "default": "1.5",
           "source": "convar",
-          "description": "How long damage numbers stay"
+          "description": "How long damage numbers stay on screen. Shorter = less clutter. Longer = easier to read your damage output."
         }
       ]
     },
@@ -501,7 +501,7 @@
           "step": 62500,
           "default": "786432",
           "source": "convar",
-          "description": "Max bytes/sec from server"
+          "description": "Max data the server sends you per second. Set to max (786432) for best hitreg. Only lower if you have very slow internet."
         },
         {
           "name": "cl_interp_ratio",
@@ -511,7 +511,7 @@
           "max": 3,
           "default": "2",
           "source": "convar",
-          "description": "Interpolation amount (lower = responsive)"
+          "description": "How much the game smooths network data. Lower (1) = more responsive but may stutter on bad connections. Higher (2-3) = smoother but slightly more delay."
         }
       ]
     },
@@ -528,7 +528,7 @@
           "step": 0.1,
           "default": "0.5",
           "source": "convar",
-          "description": "In-game music volume"
+          "description": "In-game music volume. Many competitive players set to 0 to better hear footsteps and ability sounds."
         },
         {
           "name": "snd_mixahead",
@@ -539,7 +539,7 @@
           "step": 0.005,
           "default": "0.05",
           "source": "convar",
-          "description": "Audio buffer (lower = faster, may crackle)"
+          "description": "Audio buffer size in seconds. Lower = faster audio response but may crackle on slow PCs. 0.025-0.05 is ideal for competitive."
         }
       ]
     },
@@ -556,7 +556,7 @@
           "step": 0.1,
           "default": "2.5",
           "source": "convar",
-          "description": "Mouse sensitivity"
+          "description": "How fast your camera moves with mouse input. Lower = more precise aiming, Higher = faster turns. Find what feels natural for you."
         },
         {
           "name": "m_rawinput",
@@ -564,7 +564,7 @@
           "type": "toggle",
           "default": "1",
           "source": "convar",
-          "description": "Bypass Windows mouse accel"
+          "description": "Bypasses Windows mouse acceleration and processing. ALWAYS keep ON for consistent aim. Only disable if you have weird mouse issues."
         }
       ]
     },
@@ -581,7 +581,7 @@
           "default": "0",
           "labels": ["Off", "Simple", "Detailed"],
           "source": "convar",
-          "description": "FPS counter overlay"
+          "description": "Displays FPS counter on screen. Simple shows just FPS, Detailed adds frame time and more stats. Useful for testing performance changes."
         }
       ]
     }
