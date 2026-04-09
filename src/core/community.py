@@ -474,6 +474,233 @@ def get_installed_community_presets() -> list[str]:
 
 
 # ============================================================================
+# ADMIN FUNCTIONS
+# ============================================================================
+
+# Admin secret key - only you know this
+ADMIN_SECRET = "brady_dcm_admin_2026"
+
+
+def verify_admin(secret: str) -> bool:
+    """Verify admin secret key"""
+    return secret == ADMIN_SECRET
+
+
+def list_pending_submissions(secret: str) -> list[dict]:
+    """
+    List all pending preset submissions awaiting review
+    
+    Args:
+        secret: Admin secret key
+    
+    Returns:
+        List of pending submissions
+    """
+    if not verify_admin(secret):
+        return []
+    
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/preset_submissions"
+        params = {
+            "status": "eq.pending",
+            "select": "*",
+            "order": "submitted_at.asc"
+        }
+        
+        response = requests.get(url, headers=_get_headers(), params=params, timeout=10)
+        response.raise_for_status()
+        
+        return response.json()
+    except Exception as e:
+        print(f"Failed to fetch pending submissions: {e}")
+        return []
+
+
+def approve_submission(secret: str, submission_id: str, reviewer_notes: str = "") -> bool:
+    """
+    Approve a submission and add it to community_presets
+    
+    Args:
+        secret: Admin secret key
+        submission_id: UUID of the submission
+        reviewer_notes: Optional notes for the author
+    
+    Returns:
+        True if successful
+    """
+    if not verify_admin(secret):
+        return False
+    
+    try:
+        # Get the submission
+        url = f"{SUPABASE_URL}/rest/v1/preset_submissions"
+        params = {"id": f"eq.{submission_id}", "select": "*"}
+        response = requests.get(url, headers=_get_headers(), params=params, timeout=10)
+        response.raise_for_status()
+        
+        submissions = response.json()
+        if not submissions:
+            return False
+        
+        submission = submissions[0]
+        
+        # Add to community_presets
+        preset_url = f"{SUPABASE_URL}/rest/v1/community_presets"
+        preset_data = {
+            "name": submission["name"],
+            "author": submission["author"],
+            "description": submission.get("description", ""),
+            "convars": submission.get("convars", {}),
+            "video": submission.get("video", {}),
+            "tags": submission.get("tags", []),
+            "type": submission.get("type", "convars"),
+            "approved": True,
+            "downloads": 0,
+            "upvotes": 0,
+            "downvotes": 0
+        }
+        
+        response = requests.post(preset_url, headers=_get_headers(), json=preset_data, timeout=10)
+        response.raise_for_status()
+        
+        # Update submission status
+        update_url = f"{SUPABASE_URL}/rest/v1/preset_submissions"
+        update_params = {"id": f"eq.{submission_id}"}
+        update_data = {
+            "status": "approved",
+            "reviewer_notes": reviewer_notes,
+            "reviewed_at": datetime.utcnow().isoformat()
+        }
+        
+        response = requests.patch(
+            update_url, 
+            headers=_get_headers(), 
+            params=update_params,
+            json=update_data, 
+            timeout=10
+        )
+        response.raise_for_status()
+        
+        return True
+    except Exception as e:
+        print(f"Failed to approve submission: {e}")
+        return False
+
+
+def reject_submission(secret: str, submission_id: str, reviewer_notes: str = "") -> bool:
+    """
+    Reject a submission
+    
+    Args:
+        secret: Admin secret key
+        submission_id: UUID of the submission
+        reviewer_notes: Reason for rejection (shown to author)
+    
+    Returns:
+        True if successful
+    """
+    if not verify_admin(secret):
+        return False
+    
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/preset_submissions"
+        params = {"id": f"eq.{submission_id}"}
+        data = {
+            "status": "rejected",
+            "reviewer_notes": reviewer_notes,
+            "reviewed_at": datetime.utcnow().isoformat()
+        }
+        
+        response = requests.patch(
+            url, 
+            headers=_get_headers(), 
+            params=params,
+            json=data, 
+            timeout=10
+        )
+        response.raise_for_status()
+        
+        return True
+    except Exception as e:
+        print(f"Failed to reject submission: {e}")
+        return False
+
+
+def delete_community_preset(secret: str, preset_id: str) -> bool:
+    """
+    Delete a community preset (for removing problematic ones)
+    
+    Args:
+        secret: Admin secret key
+        preset_id: UUID of the preset to delete
+    
+    Returns:
+        True if successful
+    """
+    if not verify_admin(secret):
+        return False
+    
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/community_presets"
+        params = {"id": f"eq.{preset_id}"}
+        
+        response = requests.delete(url, headers=_get_headers(), params=params, timeout=10)
+        response.raise_for_status()
+        
+        return True
+    except Exception as e:
+        print(f"Failed to delete preset: {e}")
+        return False
+
+
+def get_admin_stats(secret: str) -> dict:
+    """
+    Get admin statistics
+    
+    Returns:
+        Dict with counts and stats
+    """
+    if not verify_admin(secret):
+        return {}
+    
+    stats = {
+        "pending_count": 0,
+        "approved_count": 0,
+        "rejected_count": 0,
+        "total_downloads": 0
+    }
+    
+    try:
+        # Count pending
+        url = f"{SUPABASE_URL}/rest/v1/preset_submissions"
+        params = {"status": "eq.pending", "select": "id"}
+        response = requests.get(url, headers=_get_headers(), params=params, timeout=10)
+        if response.ok:
+            stats["pending_count"] = len(response.json())
+        
+        # Count approved presets
+        url = f"{SUPABASE_URL}/rest/v1/community_presets"
+        params = {"select": "id,downloads"}
+        response = requests.get(url, headers=_get_headers(), params=params, timeout=10)
+        if response.ok:
+            presets = response.json()
+            stats["approved_count"] = len(presets)
+            stats["total_downloads"] = sum(p.get("downloads", 0) for p in presets)
+        
+        # Count rejected
+        url = f"{SUPABASE_URL}/rest/v1/preset_submissions"
+        params = {"status": "eq.rejected", "select": "id"}
+        response = requests.get(url, headers=_get_headers(), params=params, timeout=10)
+        if response.ok:
+            stats["rejected_count"] = len(response.json())
+        
+    except Exception as e:
+        print(f"Failed to get admin stats: {e}")
+    
+    return stats
+
+
+# ============================================================================
 # LEGACY GITHUB SUPPORT (fallback)
 # ============================================================================
 

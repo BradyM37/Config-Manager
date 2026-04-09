@@ -9,6 +9,7 @@ from typing import Optional
 import threading
 import webbrowser
 import sys
+from datetime import datetime
 
 from src.core.detector import find_deadlock, get_current_config_info, validate_deadlock_path, get_gameinfo_path, get_video_settings_path
 from src.core.backup import create_backup, list_backups, restore_backup, ensure_vanilla_backup
@@ -539,6 +540,7 @@ class Sidebar(ctk.CTkFrame):
             ("advanced", "🎛️", "Advanced"),
             ("backups", "💾", "Backups"),
             ("settings", "⚙️", "Settings"),
+            ("admin", "🔐", "Admin"),
         ]
         
         nav_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -1569,6 +1571,280 @@ class SettingsTab(ctk.CTkFrame):
 
 
 # ============================================================================
+# ADMIN TAB (Hidden - Only for Brady)
+# ============================================================================
+
+class AdminTab(ctk.CTkFrame):
+    """Admin panel for reviewing community preset submissions"""
+    
+    def __init__(self, parent, app, **kwargs):
+        super().__init__(parent, fg_color="transparent", **kwargs)
+        self.app = app
+        self.admin_secret = None
+        self.is_authenticated = False
+        self.pending_submissions = []
+        self._build_ui()
+    
+    def _build_ui(self):
+        # Header
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.pack(fill="x", pady=(0, 20))
+        
+        ctk.CTkLabel(header, text="🔐 Admin Panel",
+                    font=ctk.CTkFont(family="Segoe UI", size=28, weight="bold")).pack(side="left")
+        
+        # Login section (shown when not authenticated)
+        self.login_frame = ctk.CTkFrame(self, fg_color=COLORS["bg_card"], corner_radius=10)
+        self.login_frame.pack(fill="x", pady=(0, 20))
+        
+        login_content = ctk.CTkFrame(self.login_frame, fg_color="transparent")
+        login_content.pack(fill="x", padx=25, pady=20)
+        
+        ctk.CTkLabel(login_content, text="Enter Admin Key",
+                    font=ctk.CTkFont(size=14, weight="bold")).pack(anchor="w")
+        
+        key_row = ctk.CTkFrame(login_content, fg_color="transparent")
+        key_row.pack(fill="x", pady=(10, 0))
+        
+        self.key_entry = ctk.CTkEntry(key_row, width=300, height=40,
+                                      placeholder_text="Admin secret key...", show="•")
+        self.key_entry.pack(side="left")
+        self.key_entry.bind("<Return>", lambda e: self._authenticate())
+        
+        GradientButton(key_row, text="Unlock", style="primary", width=100, height=40,
+                      command=self._authenticate).pack(side="left", padx=(10, 0))
+        
+        self.login_status = ctk.CTkLabel(login_content, text="",
+                                         font=ctk.CTkFont(size=11), text_color=COLORS["accent_danger"])
+        self.login_status.pack(anchor="w", pady=(10, 0))
+        
+        # Admin content (shown when authenticated)
+        self.admin_frame = ctk.CTkFrame(self, fg_color="transparent")
+        
+        # Stats row
+        self.stats_frame = ctk.CTkFrame(self.admin_frame, fg_color="transparent")
+        self.stats_frame.pack(fill="x", pady=(0, 20))
+        
+        for i in range(4):
+            self.stats_frame.grid_columnconfigure(i, weight=1)
+        
+        self.pending_stat = StatCard(self.stats_frame, "Pending", "0", "📥", COLORS["accent_warning"])
+        self.pending_stat.grid(row=0, column=0, padx=(0, 10), sticky="nsew")
+        
+        self.approved_stat = StatCard(self.stats_frame, "Approved", "0", "✅", COLORS["accent_success"])
+        self.approved_stat.grid(row=0, column=1, padx=10, sticky="nsew")
+        
+        self.rejected_stat = StatCard(self.stats_frame, "Rejected", "0", "❌", COLORS["accent_danger"])
+        self.rejected_stat.grid(row=0, column=2, padx=10, sticky="nsew")
+        
+        self.downloads_stat = StatCard(self.stats_frame, "Total Downloads", "0", "📊", COLORS["accent_primary"])
+        self.downloads_stat.grid(row=0, column=3, padx=(10, 0), sticky="nsew")
+        
+        # Pending submissions section
+        submissions_header = ctk.CTkFrame(self.admin_frame, fg_color="transparent")
+        submissions_header.pack(fill="x", pady=(10, 10))
+        
+        ctk.CTkLabel(submissions_header, text="📥 Pending Submissions",
+                    font=ctk.CTkFont(size=18, weight="bold")).pack(side="left")
+        
+        GradientButton(submissions_header, text="🔄 Refresh", style="secondary", width=100, height=36,
+                      command=self._load_pending).pack(side="right")
+        
+        # Submissions list
+        self.submissions_frame = ctk.CTkScrollableFrame(self.admin_frame, fg_color=COLORS["bg_card"], corner_radius=10)
+        self.submissions_frame.pack(fill="both", expand=True)
+        
+        self.no_pending_label = ctk.CTkLabel(self.submissions_frame,
+                                             text="No pending submissions",
+                                             font=ctk.CTkFont(size=14), text_color=COLORS["text_muted"])
+        self.no_pending_label.pack(pady=50)
+    
+    def _authenticate(self):
+        """Verify admin key"""
+        from src.core.community import verify_admin
+        
+        key = self.key_entry.get().strip()
+        
+        if verify_admin(key):
+            self.admin_secret = key
+            self.is_authenticated = True
+            self.login_status.configure(text="✓ Authenticated", text_color=COLORS["accent_success"])
+            self.app.sidebar.set_status("Admin mode", COLORS["accent_primary"])
+            
+            # Hide login, show admin content
+            self.after(500, self._show_admin_content)
+        else:
+            self.login_status.configure(text="Invalid key", text_color=COLORS["accent_danger"])
+    
+    def _show_admin_content(self):
+        """Switch to admin view"""
+        self.login_frame.pack_forget()
+        self.admin_frame.pack(fill="both", expand=True)
+        self._load_stats()
+        self._load_pending()
+    
+    def _load_stats(self):
+        """Load admin statistics"""
+        from src.core.community import get_admin_stats
+        
+        def fetch():
+            stats = get_admin_stats(self.admin_secret)
+            self.after(0, lambda: self._display_stats(stats))
+        
+        threading.Thread(target=fetch, daemon=True).start()
+    
+    def _display_stats(self, stats: dict):
+        """Update stat cards"""
+        self.pending_stat.set_value(str(stats.get("pending_count", 0)))
+        self.approved_stat.set_value(str(stats.get("approved_count", 0)))
+        self.rejected_stat.set_value(str(stats.get("rejected_count", 0)))
+        self.downloads_stat.set_value(str(stats.get("total_downloads", 0)))
+    
+    def _load_pending(self):
+        """Load pending submissions"""
+        from src.core.community import list_pending_submissions
+        
+        if not self.is_authenticated:
+            return
+        
+        # Show loading
+        for widget in self.submissions_frame.winfo_children():
+            widget.destroy()
+        ctk.CTkLabel(self.submissions_frame, text="Loading...",
+                    font=ctk.CTkFont(size=14), text_color=COLORS["text_muted"]).pack(pady=50)
+        
+        def fetch():
+            submissions = list_pending_submissions(self.admin_secret)
+            self.after(0, lambda: self._display_submissions(submissions))
+        
+        threading.Thread(target=fetch, daemon=True).start()
+    
+    def _display_submissions(self, submissions: list):
+        """Display pending submissions"""
+        for widget in self.submissions_frame.winfo_children():
+            widget.destroy()
+        
+        self.pending_submissions = submissions
+        
+        if not submissions:
+            ctk.CTkLabel(self.submissions_frame,
+                        text="🎉 No pending submissions!\n\nAll caught up.",
+                        font=ctk.CTkFont(size=14), text_color=COLORS["text_muted"]).pack(pady=50)
+            return
+        
+        for sub in submissions:
+            self._create_submission_card(sub)
+    
+    def _create_submission_card(self, submission: dict):
+        """Create a card for a pending submission"""
+        card = ctk.CTkFrame(self.submissions_frame, fg_color=COLORS["bg_elevated"], corner_radius=10)
+        card.pack(fill="x", padx=10, pady=8)
+        
+        content = ctk.CTkFrame(card, fg_color="transparent")
+        content.pack(fill="x", padx=20, pady=15)
+        
+        # Header row
+        header = ctk.CTkFrame(content, fg_color="transparent")
+        header.pack(fill="x")
+        
+        ctk.CTkLabel(header, text=submission.get("name", "Unnamed"),
+                    font=ctk.CTkFont(size=16, weight="bold")).pack(side="left")
+        
+        ctk.CTkLabel(header, text=f"by {submission.get('author', 'anonymous')}",
+                    font=ctk.CTkFont(size=12), text_color=COLORS["text_muted"]).pack(side="left", padx=(15, 0))
+        
+        # Timestamp
+        submitted_at = submission.get("submitted_at", "")
+        if submitted_at:
+            try:
+                dt = datetime.fromisoformat(submitted_at.replace("Z", "+00:00"))
+                time_str = dt.strftime("%Y-%m-%d %H:%M")
+            except:
+                time_str = submitted_at[:16]
+            ctk.CTkLabel(header, text=time_str,
+                        font=ctk.CTkFont(size=10), text_color=COLORS["text_muted"]).pack(side="right")
+        
+        # Description
+        desc = submission.get("description", "")
+        if desc:
+            ctk.CTkLabel(content, text=desc,
+                        font=ctk.CTkFont(size=12), text_color=COLORS["text_secondary"],
+                        wraplength=600).pack(anchor="w", pady=(8, 0))
+        
+        # Tags
+        tags = submission.get("tags", [])
+        if tags:
+            tags_frame = ctk.CTkFrame(content, fg_color="transparent")
+            tags_frame.pack(anchor="w", pady=(8, 0))
+            for tag in tags[:5]:
+                ctk.CTkLabel(tags_frame, text=tag,
+                            font=ctk.CTkFont(size=10),
+                            fg_color=COLORS["bg_card"], corner_radius=4).pack(side="left", padx=(0, 5))
+        
+        # Convars preview
+        convars = submission.get("convars", {})
+        if convars:
+            preview = ", ".join(list(convars.keys())[:5])
+            if len(convars) > 5:
+                preview += f" +{len(convars) - 5} more"
+            ctk.CTkLabel(content, text=f"ConVars: {preview}",
+                        font=ctk.CTkFont(size=10), text_color=COLORS["text_muted"]).pack(anchor="w", pady=(8, 0))
+        
+        # Action buttons
+        actions = ctk.CTkFrame(content, fg_color="transparent")
+        actions.pack(fill="x", pady=(15, 0))
+        
+        # Notes entry
+        notes_entry = ctk.CTkEntry(actions, width=300, height=35,
+                                   placeholder_text="Reviewer notes (optional)")
+        notes_entry.pack(side="left")
+        
+        sub_id = submission.get("id", "")
+        
+        GradientButton(actions, text="❌ Reject", style="danger", width=100, height=35,
+                      command=lambda sid=sub_id, ne=notes_entry: self._reject(sid, ne.get())).pack(side="right", padx=(10, 0))
+        
+        GradientButton(actions, text="✅ Approve", style="success", width=100, height=35,
+                      command=lambda sid=sub_id, ne=notes_entry: self._approve(sid, ne.get())).pack(side="right")
+    
+    def _approve(self, submission_id: str, notes: str):
+        """Approve a submission"""
+        from src.core.community import approve_submission
+        
+        def do_approve():
+            success = approve_submission(self.admin_secret, submission_id, notes)
+            if success:
+                self.after(0, lambda: self.app.sidebar.set_status("Approved!", COLORS["accent_success"]))
+                self.after(0, self._load_pending)
+                self.after(0, self._load_stats)
+            else:
+                self.after(0, lambda: self.app.sidebar.set_status("Failed to approve", COLORS["accent_danger"]))
+        
+        threading.Thread(target=do_approve, daemon=True).start()
+    
+    def _reject(self, submission_id: str, notes: str):
+        """Reject a submission"""
+        from src.core.community import reject_submission
+        
+        def do_reject():
+            success = reject_submission(self.admin_secret, submission_id, notes)
+            if success:
+                self.after(0, lambda: self.app.sidebar.set_status("Rejected", COLORS["accent_warning"]))
+                self.after(0, self._load_pending)
+                self.after(0, self._load_stats)
+            else:
+                self.after(0, lambda: self.app.sidebar.set_status("Failed to reject", COLORS["accent_danger"]))
+        
+        threading.Thread(target=do_reject, daemon=True).start()
+    
+    def refresh(self):
+        """Called when tab becomes visible"""
+        if self.is_authenticated:
+            self._load_stats()
+            self._load_pending()
+
+
+# ============================================================================
 # MAIN APPLICATION
 # ============================================================================
 
@@ -1616,6 +1892,7 @@ class App(ctk.CTk):
         self.advanced_tab = AdvancedTab(self.content, self)
         self.backups_tab = BackupsTab(self.content, self)
         self.settings_tab = SettingsTab(self.content, self)
+        self.admin_tab = AdminTab(self.content, self)
         
         self.tabs = {
             "dashboard": self.dashboard,
@@ -1624,6 +1901,7 @@ class App(ctk.CTk):
             "advanced": self.advanced_tab,
             "backups": self.backups_tab,
             "settings": self.settings_tab,
+            "admin": self.admin_tab,
         }
         
         self._navigate("dashboard")
