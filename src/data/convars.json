@@ -16,6 +16,36 @@
           "description": "Maximum FPS (0 = unlimited)"
         },
         {
+          "name": "mat_vsync",
+          "display": "VSync",
+          "type": "toggle",
+          "default": "0",
+          "source": "convar",
+          "description": "Vertical sync (off = lower input lag)"
+        },
+        {
+          "name": "gpu_level",
+          "display": "GPU Quality",
+          "type": "slider",
+          "min": 0,
+          "max": 3,
+          "default": "2",
+          "labels": ["Low", "Medium", "High", "Ultra"],
+          "source": "convar",
+          "description": "GPU quality preset"
+        },
+        {
+          "name": "cpu_level",
+          "display": "CPU Quality",
+          "type": "slider",
+          "min": 0,
+          "max": 3,
+          "default": "2",
+          "labels": ["Low", "Medium", "High", "Ultra"],
+          "source": "convar",
+          "description": "CPU quality preset"
+        },
+        {
           "name": "r_farz",
           "display": "Render Distance",
           "type": "slider",
@@ -329,6 +359,14 @@
           "default": "1",
           "source": "convar",
           "description": "Foliage rendering"
+        },
+        {
+          "name": "r_fullbright",
+          "display": "Fullbright",
+          "type": "toggle",
+          "default": "0",
+          "source": "convar",
+          "description": "Disable lighting (if server allows)"
         }
       ]
     },
@@ -474,6 +512,76 @@
           "default": "2",
           "source": "convar",
           "description": "Interpolation amount (lower = responsive)"
+        }
+      ]
+    },
+    {
+      "name": "Audio",
+      "icon": "🔊",
+      "convars": [
+        {
+          "name": "snd_musicvolume",
+          "display": "Music Volume",
+          "type": "slider",
+          "min": 0,
+          "max": 1,
+          "step": 0.1,
+          "default": "0.5",
+          "source": "convar",
+          "description": "In-game music volume"
+        },
+        {
+          "name": "snd_mixahead",
+          "display": "Audio Latency",
+          "type": "slider",
+          "min": 0.025,
+          "max": 0.1,
+          "step": 0.005,
+          "default": "0.05",
+          "source": "convar",
+          "description": "Audio buffer (lower = faster, may crackle)"
+        }
+      ]
+    },
+    {
+      "name": "Input",
+      "icon": "🖱️",
+      "convars": [
+        {
+          "name": "sensitivity",
+          "display": "Mouse Sensitivity",
+          "type": "slider",
+          "min": 0.1,
+          "max": 10,
+          "step": 0.1,
+          "default": "2.5",
+          "source": "convar",
+          "description": "Mouse sensitivity"
+        },
+        {
+          "name": "m_rawinput",
+          "display": "Raw Input",
+          "type": "toggle",
+          "default": "1",
+          "source": "convar",
+          "description": "Bypass Windows mouse accel"
+        }
+      ]
+    },
+    {
+      "name": "Debug",
+      "icon": "🐛",
+      "convars": [
+        {
+          "name": "cl_showfps",
+          "display": "Show FPS",
+          "type": "slider",
+          "min": 0,
+          "max": 2,
+          "default": "0",
+          "labels": ["Off", "Simple", "Detailed"],
+          "source": "convar",
+          "description": "FPS counter overlay"
         }
       ]
     }

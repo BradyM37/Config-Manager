@@ -45,6 +45,10 @@
     "panorama_disable_blur": "1",
     "panorama_disable_box_shadow": "1",
     "rate": "786432",
-    "cl_interp_ratio": "2"
+    "cl_interp_ratio": "2",
+    "mat_vsync": "0",
+    "snd_mixahead": "0.025",
+    "m_rawinput": "1",
+    "cl_showfps": "1"
   }
 }

@@ -52,6 +52,9 @@
     "rate": "786432",
     "fps_max": "0",
     "r_dynamic_shadows": "0",
-    "mat_vsync": "0"
+    "mat_vsync": "0",
+    "snd_mixahead": "0.025",
+    "m_rawinput": "1",
+    "cl_showfps": "1"
   }
 }
