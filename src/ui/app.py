@@ -1862,6 +1862,13 @@ class App(ctk.CTk):
         self.minsize(950, 650)
         self.configure(fg_color=COLORS["bg_dark"])
         
+        # Performance: disable window transparency effects
+        try:
+            self.attributes('-alpha', 1.0)  # Fully opaque
+            self.attributes('-transparentcolor', '')  # No transparent color
+        except:
+            pass
+        
         self.deadlock_path: Optional[Path] = None
         self.selected_preset: Optional[str] = None
         self.tabs = {}
@@ -1886,23 +1893,21 @@ class App(ctk.CTk):
         self.content = ctk.CTkFrame(self, fg_color="transparent")
         self.content.pack(side="right", fill="both", expand=True, padx=25, pady=25)
         
+        # Only create dashboard immediately - lazy load others for faster startup
         self.dashboard = DashboardTab(self.content, self)
-        self.presets_tab = PresetsTab(self.content, self)
-        self.community_tab = CommunityTab(self.content, self)
-        self.advanced_tab = AdvancedTab(self.content, self)
-        self.backups_tab = BackupsTab(self.content, self)
-        self.settings_tab = SettingsTab(self.content, self)
-        self.admin_tab = AdminTab(self.content, self)
         
-        self.tabs = {
-            "dashboard": self.dashboard,
-            "presets": self.presets_tab,
-            "community": self.community_tab,
-            "advanced": self.advanced_tab,
-            "backups": self.backups_tab,
-            "settings": self.settings_tab,
-            "admin": self.admin_tab,
+        # Tab registry - will be populated lazily
+        self._tab_classes = {
+            "dashboard": (DashboardTab, self.dashboard),
+            "presets": (PresetsTab, None),
+            "community": (CommunityTab, None),
+            "advanced": (AdvancedTab, None),
+            "backups": (BackupsTab, None),
+            "settings": (SettingsTab, None),
+            "admin": (AdminTab, None),
         }
+        
+        self.tabs = {"dashboard": self.dashboard}
         
         self._navigate("dashboard")
     
@@ -1955,6 +1960,14 @@ class App(ctk.CTk):
         for tab in self.tabs.values():
             tab.pack_forget()
         
+        # Lazy load tab if not created yet
+        if tab_id not in self.tabs and tab_id in self._tab_classes:
+            tab_class, instance = self._tab_classes[tab_id]
+            if instance is None:
+                instance = tab_class(self.content, self)
+                self._tab_classes[tab_id] = (tab_class, instance)
+                self.tabs[tab_id] = instance
+        
         if tab_id in self.tabs:
             self.tabs[tab_id].pack(fill="both", expand=True)
             self.sidebar.set_active(tab_id)
@@ -1976,7 +1989,8 @@ class App(ctk.CTk):
         if path:
             self.sidebar.set_status("Ready", COLORS["accent_success"])
             ensure_vanilla_backup(path)
-            self.settings_tab.refresh()
+            if "settings" in self.tabs:
+                self.tabs["settings"].refresh()
             self.dashboard.refresh()
         else:
             self.sidebar.set_status("Game not found", COLORS["accent_warning"])
@@ -1989,7 +2003,8 @@ class App(ctk.CTk):
                 self.deadlock_path = path
                 self.sidebar.set_status("Ready", COLORS["accent_success"])
                 ensure_vanilla_backup(path)
-                self.settings_tab.refresh()
+                if "settings" in self.tabs:
+                    self.tabs["settings"].refresh()
                 self.dashboard.refresh()
             else:
                 self.sidebar.set_status("Invalid path", COLORS["accent_danger"])
@@ -2028,7 +2043,8 @@ class App(ctk.CTk):
             
             # Refresh UI to show new values
             self.dashboard.refresh()
-            self.advanced_tab.refresh()
+            if "advanced" in self.tabs:
+                self.tabs["advanced"].refresh()
         else:
             self.sidebar.set_status("Failed", COLORS["accent_danger"])
     
