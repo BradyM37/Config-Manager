@@ -386,6 +386,18 @@
           "description": "How wide your camera view is. Higher = see more but things look smaller/farther. 100-110 is popular for competitive. Too high can cause motion sickness."
         },
         {
+          "name": "r_aspectratio",
+          "display": "Aspect Ratio",
+          "type": "slider",
+          "min": 0,
+          "max": 5,
+          "default": "0",
+          "labels": ["Auto", "4:3", "16:10", "16:9", "21:9", "32:9"],
+          "values": ["0", "1.333", "1.6", "1.778", "2.333", "3.556"],
+          "source": "convar",
+          "description": "Screen aspect ratio. Auto detects your monitor. Set manually for stretched res (4:3) or ultrawide (21:9/32:9). Affects horizontal FOV."
+        },
+        {
           "name": "citadel_crosshair_pip_gap",
           "display": "Crosshair Gap",
           "type": "slider",

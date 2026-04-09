@@ -158,6 +158,7 @@ class ConVarSlider(ctk.CTkFrame):
     def __init__(self, parent, name: str, display: str, description: str,
                  min_val: float, max_val: float, default: str = "0",
                  step: float = 1, labels: Optional[list[str]] = None,
+                 values: Optional[list[str]] = None,
                  on_change: Optional[Callable] = None, **kwargs):
         super().__init__(parent, fg_color="transparent", **kwargs)
         
@@ -168,6 +169,7 @@ class ConVarSlider(ctk.CTkFrame):
         self.max_val = max_val
         self.step = step
         self.labels = labels
+        self.values = values  # Maps slider position to actual value
         self.on_change = on_change
         
         self.label = ctk.CTkLabel(self, text=display, font=ctk.CTkFont(size=12),
@@ -201,11 +203,30 @@ class ConVarSlider(ctk.CTkFrame):
     
     def get_value(self) -> str:
         val = self.slider.get()
+        idx = int(val - self.min_val)
+        # If values array exists, return mapped value
+        if self.values and 0 <= idx < len(self.values):
+            return self.values[idx]
         return str(int(val) if self.step >= 1 else val)
     
     def set_value(self, value: str):
         try:
-            val = float(value)
+            # If values array exists, find position by value
+            if self.values:
+                if value in self.values:
+                    idx = self.values.index(value)
+                    val = self.min_val + idx
+                else:
+                    # Try to find closest match for float values
+                    try:
+                        target = float(value)
+                        closest_idx = min(range(len(self.values)), 
+                                         key=lambda i: abs(float(self.values[i]) - target))
+                        val = self.min_val + closest_idx
+                    except:
+                        val = float(value)
+            else:
+                val = float(value)
             self.slider.set(val)
             self.value_label.configure(text=self._format_value(val))
         except ValueError:
@@ -250,7 +271,8 @@ class ConVarCategory(ctk.CTkFrame):
                     description=cv.get("description", ""),
                     min_val=cv.get("min", 0), max_val=cv.get("max", 100),
                     default=cv.get("default", "0"), step=cv.get("step", 1),
-                    labels=cv.get("labels")
+                    labels=cv.get("labels"),
+                    values=cv.get("values")
                 )
             else:
                 continue
